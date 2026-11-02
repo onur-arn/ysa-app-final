@@ -793,7 +793,8 @@ begin
     + (select count(*) * 5 from events x where x.created_by = p.id)
     + (select count(*) from poll_votes x where x.user_id = p.id)
     + (select count(*) from task_comments x where x.author_id = p.id)
-    + (select count(*) * 10 from tasks x where x.status = 'done' and x.assignee_id = p.id);
+    + (select count(*) * 10 from tasks x where x.status = 'done' and x.assignee_id = p.id)
+  where true;   -- Supabase's safeupdate refuses an UPDATE without WHERE
   perform set_config('ysa.trusted', 'off', true);
 end $$;
 create or replace function public.member_rank(uid uuid) returns table(points int, rank bigint, total bigint)
