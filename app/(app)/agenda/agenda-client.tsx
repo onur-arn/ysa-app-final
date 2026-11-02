@@ -30,7 +30,7 @@ export function AgendaClient() {
   const params = useSearchParams()
   const { data: events = [] } = useEvents()
   const [view, setView] = useState<"month" | "list">("month")
-  const [scope, setScope] = useState<"all" | "mine">("all")
+  const [scope, setScope] = useState<"all" | "mine">("mine")
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [dir, setDir] = useState(0)
   const [day, setDay] = useState<Date | null>(null)
@@ -83,8 +83,8 @@ export function AgendaClient() {
         </button>
         <button onClick={() => go(1)} className="flex size-9 items-center justify-center rounded-xl hover:bg-secondary" aria-label="next"><ChevronRight className="size-5" /></button>
         <div className="ml-1 flex rounded-xl bg-secondary p-0.5">
-          <button onClick={() => setScope("all")} className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", scope === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{t("common.all")}</button>
           <button onClick={() => setScope("mine")} className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", scope === "mine" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{station(me.station_id)?.short}</button>
+          <button onClick={() => setScope("all")} className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", scope === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{t("common.all")}</button>
         </div>
         <button onClick={() => setView(view === "month" ? "list" : "month")} className="flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary" aria-label="view">
           {view === "month" ? <List className="size-5" /> : <CalendarDays className="size-5" />}
@@ -132,7 +132,7 @@ export function AgendaClient() {
                           style={{ backgroundColor: `hsl(${color} / 0.16)`, color: `hsl(${color})` }}
                         >
                           {e.is_private && <Lock className="size-2.5 shrink-0" />}
-                          <span className="truncate">{e.title}</span>
+                          {!e.locked && <span className="truncate">{e.title}</span>}
                         </span>
                       )
                     })}
@@ -198,10 +198,11 @@ function EventRow({ e, onClick }: { e: AppEvent; onClick: () => void }) {
           <span className="font-heading text-lg font-bold leading-tight">{d.getDate()}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-foreground">{e.is_private && <Lock className="size-3.5 shrink-0 text-amber-500" />}{e.title}</p>
+          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-foreground">{e.is_private && <Lock className="size-3.5 shrink-0 text-amber-500" />}{e.locked ? t("agenda.private") : e.title}</p>
           <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
             {e.all_day ? `${fmtDate(d, { day: "numeric", month: "short" })} → ${e.ends_at ? fmtDate(e.ends_at, { day: "numeric", month: "short" }) : ""}` : fmtDate(d, { hour: "2-digit", minute: "2-digit" })}
             {e.location && <><MapPin className="ml-1 size-3 shrink-0" /> {e.location}</>}
+            {e.locked && <span className="ml-1">· {t("agenda.lockedHint")}</span>}
           </p>
           <StationBadge id={e.station_id} short className="mt-1 px-2 py-0 text-[10px]" />
         </div>

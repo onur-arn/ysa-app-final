@@ -86,6 +86,8 @@ async function seed(id) {
 }
 
 try {
+  // Demo only: lets admin@example.com open the 🔐 Yönetici panel. Remove this row before going live.
+  must(await db.from("vip_emails").upsert({ email: "admin@example.com" }), "vip")
   const id = {}
   for (const [i, u] of USERS.entries()) {
     id[u.key] = await upsertUser(u, i)
@@ -93,6 +95,7 @@ try {
   }
   await seed(id)
   console.log(`\nMot de passe commun : ${PASSWORD}`)
+  console.log("⚠️  admin@example.com a été ajouté aux comptes VIP (démo) — à retirer de vip_emails avant la mise en ligne.")
 } catch (e) {
   console.error("Échec :", e.message)
   process.exit(1)

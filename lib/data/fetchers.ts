@@ -38,7 +38,15 @@ export const fetchStories = async () =>
 export async function fetchEvents() {
   const from = new Date()
   from.setMonth(from.getMonth() - 6)
-  return must(await sb().from("events").select("*").gte("starts_at", from.toISOString()).order("starts_at")) as AppEvent[]
+  const [open, locked] = await Promise.all([
+    sb().from("events").select("*").gte("starts_at", from.toISOString()).order("starts_at"),
+    sb().rpc("locked_events"),
+  ])
+  // Private events of other stations come back as bare 🔒 slots, without any content.
+  const slots = ((locked.data ?? []) as Pick<AppEvent, "id" | "starts_at" | "ends_at" | "all_day" | "station_id">[]).map(
+    (e): AppEvent => ({ ...e, title: "", description: null, location: null, link: null, is_private: true, created_by: null, created_at: e.starts_at, locked: true }),
+  )
+  return [...(must(open) as AppEvent[]), ...slots].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
 }
 
 export const fetchTasks = async () =>

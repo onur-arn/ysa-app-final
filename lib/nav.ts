@@ -1,4 +1,4 @@
-import { CalendarDays, Home, ListChecks, MessageCircle, Settings, ShieldCheck, Users } from "lucide-react"
+import { CalendarDays, Home, ListChecks, MessageCircle, Settings, Users } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 export type NavItem = { href: string; icon: LucideIcon; key: string; adminOnly?: boolean }
@@ -15,7 +15,6 @@ export const BOTTOM_NAV: NavItem[] = [
 export const SIDE_NAV: NavItem[] = [
   BOTTOM_NAV[2], BOTTOM_NAV[1], BOTTOM_NAV[3], BOTTOM_NAV[4], BOTTOM_NAV[0],
   { href: "/ayarlar", icon: Settings, key: "nav.settings" },
-  { href: "/yonetici", icon: ShieldCheck, key: "nav.admin", adminOnly: true },
 ]
 
 export const PAGE_TITLES: [string, string][] = [

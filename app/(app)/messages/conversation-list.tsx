@@ -7,7 +7,7 @@ import { useMemo, useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { MemberPicker } from "@/components/member-picker"
 import { Button } from "@/components/ui/button"
-import { EmptyState, Fab, Segmented } from "@/components/ui/misc"
+import { EmptyState, Segmented } from "@/components/ui/misc"
 import { Field, Input, Sheet } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
@@ -39,15 +39,14 @@ export function ConversationList() {
   const router = useRouter()
   const { typingIn } = useHub()
   const { data: rows, isPending } = useConversations()
-  const [tab, setTab] = useState<"all" | "group" | "dm">("all")
   const [q, setQ] = useState("")
   const [creating, setCreating] = useState(false)
 
   const titleOf = (c: ConversationRow) => (c.type === "dm" ? member(c.other_id)?.full_name ?? t("common.formerMember") : c.name ?? t("messages.group"))
   const list = useMemo(() => {
     const s = q.trim().toLocaleLowerCase("tr")
-    return (rows ?? []).filter((c) => (tab === "all" || c.type === tab) && (!s || titleOf(c).toLocaleLowerCase("tr").includes(s)))
-  }, [rows, q, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+    return (rows ?? []).filter((c) => !s || titleOf(c).toLocaleLowerCase("tr").includes(s))
+  }, [rows, q]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function preview(c: ConversationRow) {
     const typers = typingIn(c.id)
@@ -60,25 +59,18 @@ export function ConversationList() {
     return c.last_kind === "system" ? body : who + body
   }
 
-  const unreadGroups = (rows ?? []).filter((c) => c.type === "group" && c.unread).length
-  const unreadDms = (rows ?? []).filter((c) => c.type === "dm" && c.unread).length
 
   return (
     <div className="flex flex-col gap-3 px-4 pt-4">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("messages.search")} className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("messages.search")} className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" />
+        </div>
+        <button onClick={() => setCreating(true)} className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/20 active:scale-95" aria-label={t("messages.new")}>
+          <MessageCirclePlus className="size-5" />
+        </button>
       </div>
-      <Segmented
-        value={tab}
-        onChange={setTab}
-        layoutId="conv-tab"
-        options={[
-          { id: "all", label: t("common.all") },
-          { id: "group", label: t("messages.groups"), count: unreadGroups },
-          { id: "dm", label: t("messages.direct"), count: unreadDms },
-        ]}
-      />
 
       {isPending && !rows ? (
         <ListSkeleton />
@@ -112,7 +104,6 @@ export function ConversationList() {
         </div>
       )}
 
-      <Fab icon={MessageCirclePlus} label={t("messages.new")} onClick={() => setCreating(true)} />
       <NewConversation open={creating} onClose={() => setCreating(false)} onOpen={(id) => router.push(`/messages/${id}`)} />
     </div>
   )
@@ -139,7 +130,7 @@ function NewConversation({ open, onClose, onOpen }: { open: boolean; onClose: ()
         const avatar_url = photo ? await uploadMedia(await compressImage(photo, 512), me.id, "groups") : null
         const { data: conv, error } = await supabase.from("conversations").insert({ type: "group", name: name.trim(), avatar_url, created_by: me.id }).select("id").single()
         if (error) throw error
-        const { error: e2 } = await supabase.from("conversation_members").insert([{ conversation_id: conv.id, user_id: me.id, is_admin: true }, ...ids.map((user_id) => ({ conversation_id: conv.id, user_id }))])
+        const { error: e2 } = await supabase.from("conversation_members").insert([{ conversation_id: conv.id, user_id: me.id, is_admin: true }, ...ids.map((user_id) => ({ conversation_id: conv.id, user_id, is_admin: false }))])
         if (e2) throw e2
         await supabase.from("messages").insert({ conversation_id: conv.id, sender_id: me.id, kind: "system", content: t("messages.groupCreated", { name: me.full_name }) })
         onOpen(conv.id)

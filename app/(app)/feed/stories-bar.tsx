@@ -20,7 +20,7 @@ import { StoryEditor } from "./story-editor"
 const SEEN_KEY = "ysa-seen-stories"
 
 export function StoriesBar() {
-  const { me } = useApp()
+  const { me, stations, station } = useApp()
   const { t, fmtRelative } = useI18n()
   const member = useMemberMap()
   const qc = useQueryClient()
@@ -29,7 +29,7 @@ export function StoriesBar() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [draft, setDraft] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [viewer, setViewer] = useState<{ author: number; index: number } | null>(null)
+  const [viewer, setViewer] = useState<{ station: string; mine: boolean; index: number } | null>(null)
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(false)
   const [seen, setSeen] = useState<Set<string>>(new Set())
@@ -38,12 +38,22 @@ export function StoriesBar() {
     try { setSeen(new Set(JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]"))) } catch {}
   }, [])
 
-  const groups = useMemo(() => {
+  // One bubble per station (v1 behaviour): unseen first, then stations with stories, then the rest.
+  const byStation = useMemo(() => {
     const map = new Map<string, Story[]>()
-    for (const s of stories) map.set(s.author_id, [...(map.get(s.author_id) ?? []), s])
-    return [...map.values()].sort((a, b) => (a[0].author_id === me.id ? -1 : b[0].author_id === me.id ? 1 : 0))
-  }, [stories, me.id])
-  const current = viewer ? groups[viewer.author]?.[viewer.index] : null
+    for (const s of stories) {
+      const st = member(s.author_id)?.station_id ?? "intl"
+      map.set(st, [...(map.get(st) ?? []), s])
+    }
+    return map
+  }, [stories, member])
+  const myStories = stories.filter((s) => s.author_id === me.id)
+  const ordered = [...stations].sort((a, b) => {
+    const score = (id: string) => ((byStation.get(id) ?? []).some((s) => !seen.has(s.id)) ? 0 : byStation.has(id) ? 1 : 2)
+    return score(a.id) - score(b.id)
+  })
+  const reel = viewer ? (viewer.mine ? myStories : byStation.get(viewer.station) ?? []) : []
+  const current = viewer ? reel[viewer.index] : null
 
   useEffect(() => {
     audioRef.current?.pause()
@@ -69,12 +79,14 @@ export function StoriesBar() {
 
   function step(dir: 1 | -1) {
     if (!viewer) return
-    const g = groups[viewer.author]
     const i = viewer.index + dir
-    if (i >= 0 && i < g.length) return setViewer({ ...viewer, index: i })
-    const a = viewer.author + dir
-    if (a >= 0 && a < groups.length) return setViewer({ author: a, index: dir === 1 ? 0 : groups[a].length - 1 })
-    setViewer(null)
+    if (i >= 0 && i < reel.length) return setViewer({ ...viewer, index: i })
+    if (dir === -1) return
+    if (viewer.mine) return setViewer(null)
+    // continue with the next station that has stories
+    const rest = ordered.filter((st) => byStation.has(st.id))
+    const next = rest[rest.findIndex((st) => st.id === viewer.station) + 1]
+    setViewer(next ? { station: next.id, mine: false, index: 0 } : null)
   }
 
   function pick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -110,42 +122,52 @@ export function StoriesBar() {
     toast("❤️")
   }
 
-  const hasMine = groups[0]?.[0]?.author_id === me.id
   const author = member(current?.author_id)
 
   return (
     <>
       <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-3">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
-        {!hasMine && (
-          <button onClick={() => fileRef.current?.click()} className="flex w-16 shrink-0 flex-col items-center gap-1">
-            <span className="relative">
-              <Avatar name={me.full_name} photoUrl={me.photo_url} stationId={me.station_id} size={60} />
-              <span className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
-                {uploading ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" strokeWidth={3} />}
-              </span>
-            </span>
-            <span className="w-full truncate text-center text-[11px] font-medium text-muted-foreground">{t("feed.yourStory")}</span>
-          </button>
-        )}
-        {groups.map((g, i) => {
-          const a = member(g[0].author_id)
-          const unseen = g.some((s) => !seen.has(s.id))
-          const mine = g[0].author_id === me.id
-          return (
-            <div key={g[0].author_id} className="relative flex w-16 shrink-0 flex-col items-center gap-1">
-              <button onClick={() => setViewer({ author: i, index: 0 })}>
-                <span className={cn("block rounded-full p-[2.5px]", unseen ? "bg-gradient-to-tr from-primary via-sky-400 to-emerald-400" : "bg-border")}>
-                  <span className="block rounded-full bg-background p-[2px]"><Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={52} /></span>
-                </span>
-              </button>
-              {mine && (
-                <button onClick={() => fileRef.current?.click()} className="absolute right-0 top-10 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background" aria-label="add">
-                  {uploading ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" strokeWidth={3} />}
-                </button>
+        <button onClick={() => (myStories.length ? setViewer({ station: me.station_id ?? "intl", mine: true, index: 0 }) : fileRef.current?.click())} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+          <span className={cn("relative rounded-full p-[2.5px]", myStories.length ? "bg-primary" : "bg-transparent")}>
+            <span className={cn("flex size-16 items-center justify-center overflow-hidden rounded-full border-2", myStories.length ? "border-card" : "border-dashed border-primary/50 bg-primary/5")}>
+              {myStories.length ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={myStories[myStories.length - 1].image_url} alt="" className="size-full object-cover" />
+              ) : me.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={me.photo_url} alt="" className="size-full object-cover" />
+              ) : (
+                <Plus className="size-6 text-primary" />
               )}
-              <span className="w-full truncate text-center text-[11px] font-medium text-muted-foreground">{mine ? t("feed.yourStory") : a?.first_name}</span>
-            </div>
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
+              className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow ring-2 ring-background"
+            >
+              {uploading ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" strokeWidth={3} />}
+            </span>
+          </span>
+          <span className="w-full truncate text-center text-[11px] font-medium text-muted-foreground">{t("feed.yourStory")}</span>
+        </button>
+        {ordered.map((st) => {
+          const list = byStation.get(st.id) ?? []
+          const unseen = list.some((x) => !seen.has(x.id))
+          return (
+            <button key={st.id} disabled={!list.length} onClick={() => setViewer({ station: st.id, mine: false, index: 0 })} className="flex w-16 shrink-0 flex-col items-center gap-1.5 disabled:cursor-default">
+              <span className={cn("relative rounded-full p-[2.5px]", list.length ? (unseen ? "bg-gradient-to-tr from-primary via-sky-400 to-emerald-400" : "bg-border") : "bg-transparent")}>
+                {list.length ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={list[list.length - 1].image_url} alt={st.city} className="size-16 rounded-full border-2 border-card object-cover" />
+                ) : (
+                  <span className="flex size-16 items-center justify-center rounded-full border-2 border-card font-heading text-[11px] font-bold tracking-wide text-white" style={{ backgroundColor: `hsl(${st.color})` }}>{st.short}</span>
+                )}
+                {list.length > 1 && <span className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow">{list.length}</span>}
+              </span>
+              <span className={cn("w-full truncate text-center text-[11px] font-medium", unseen ? "font-semibold text-foreground" : "text-muted-foreground")}>{st.city}</span>
+            </button>
           )
         })}
       </div>
@@ -160,7 +182,7 @@ export function StoriesBar() {
               <img src={current.image_url} alt="" className={cn("absolute inset-0 size-full", current.fit_mode === "contain" ? "object-contain" : "object-cover")} />
               <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
                 <div className="flex gap-1">
-                  {groups[viewer.author].map((s, i) => (
+                  {reel.map((s, i) => (
                     <span key={s.id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
                       {i < viewer.index && <span className="block h-full w-full bg-white" />}
                       {i === viewer.index && <span key={current.id} className={cn("story-progress-bar", paused && "paused")} onAnimationEnd={() => step(1)} />}
@@ -170,7 +192,7 @@ export function StoriesBar() {
                 <div className="mt-3 flex items-center gap-2 text-white">
                   <Avatar name={author?.full_name} photoUrl={author?.photo_url} stationId={author?.station_id} size={32} />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{author?.full_name}</span>
+                    <span className="block truncate text-sm font-semibold">{author?.full_name} <span className="font-normal text-white/70">· {station(author?.station_id)?.city}</span></span>
                     <span className="block text-[11px] text-white/70">{fmtRelative(current.created_at)}</span>
                   </span>
                   <div className="ml-auto flex items-center gap-1">

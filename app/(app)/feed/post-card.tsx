@@ -14,7 +14,7 @@ import { useApp } from "@/components/providers/app-context"
 import { useMemberMap } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isAdmin, isIntl } from "@/lib/permissions"
+import { isIntl } from "@/lib/permissions"
 import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
 import type { Poll, Post } from "@/lib/types"
@@ -31,7 +31,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const supabase = createClient()
   const author = member(post.author_id)
   const liked = post.post_likes.some((l) => l.user_id === me.id)
-  const canDelete = post.author_id === me.id || isAdmin(me)
+  const canDelete = post.author_id === me.id || isIntl(me)
 
   /** optimistic edit of this post in the shared feed cache */
   const patch = (fn: (p: Post) => Post | null) =>
@@ -55,6 +55,11 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
     const { error } = await supabase.from("post_comments").insert({ post_id: post.id, author_id: me.id, content })
     if (error) toast(t("common.error"), { error: true })
     else dispatchPush()
+  }
+
+  async function removeComment(cid: string) {
+    patch((p) => ({ ...p, post_comments: p.post_comments.filter((c) => c.id !== cid) }))
+    await supabase.from("post_comments").delete().eq("id", cid)
   }
 
   async function togglePin() {
@@ -153,8 +158,13 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
             return (
               <div key={c.id} className="flex gap-2.5">
                 <Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={28} />
-                <div className="min-w-0 flex-1 rounded-2xl bg-secondary/70 px-3 py-2">
-                  <p className="text-xs font-semibold text-foreground">{a?.full_name} <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span></p>
+                <div className="group min-w-0 flex-1 rounded-2xl bg-secondary/70 px-3 py-2">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-foreground">
+                    {a?.full_name} <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span>
+                    {(c.author_id === me.id || isIntl(me)) && (
+                      <button onClick={() => removeComment(c.id)} className="ml-auto text-muted-foreground opacity-60 hover:text-destructive group-hover:opacity-100" aria-label={t("common.delete")}><Trash2 className="size-3" /></button>
+                    )}
+                  </p>
                   <p className="whitespace-pre-wrap break-words text-sm text-foreground">{c.content}</p>
                 </div>
               </div>

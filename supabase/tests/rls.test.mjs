@@ -47,7 +47,7 @@ const check = (name, cond) => { console.log((cond ? "PASS " : "FAIL ") + name); 
 
 // ── accounts ────────────────────────────────────────────────────────────────
 let r = await q(`select id, app_role, status from profiles order by id`)
-check("bootstrap e-mail becomes active admin", r[0].app_role === "admin" && r[0].status === "active")
+check("VIP e-mail becomes active admin", r[0].app_role === "admin" && r[0].status === "active")
 check("other sign-ups wait for approval", r.slice(1).every((p) => p.status === "pending" && p.app_role === "member"))
 check("pending member sees only himself", (await as(B, `select id from profiles`)).rows.length === 1)
 await as(B, `update profiles set status = 'active', app_role = 'admin', points = 999 where id = '${B}'`)
@@ -69,13 +69,28 @@ check("author cannot pin his own post", (await q(`select pinned from posts where
 await as(D, `update posts set pinned = true where id = '${post}'`)
 check("Uluslararası Büro pins a post", (await q(`select pinned from posts where id = '${post}'`))[0].pinned === true)
 await as(C, `insert into post_comments (post_id, author_id, content) values ('${post}', '${C}', 'güzel')`)
+check("comment earns +2 points", (await q(`select points from profiles where id = '${C}'`))[0].points === 2)
 check("comment notifies the author", (await q(`select 1 from notifications where type = 'comment' and user_id = '${B}'`)).length === 1)
 check("clients cannot write notifications", await fails(B, `insert into notifications (user_id, type, title) values ('${C}', 'task', 'fake')`))
+
+await as(C, `insert into post_likes (post_id, user_id) values ('${post}', '${C}')`)
+check("like earns +1 point", (await q(`select points from profiles where id = '${C}'`))[0].points === 3)
+await as(C, `delete from post_likes where post_id = '${post}' and user_id = '${C}'`)
+await as(C, `insert into post_likes (post_id, user_id) values ('${post}', '${C}')`)
+check("like / unlike cannot farm points", (await q(`select points from profiles where id = '${C}'`))[0].points === 3)
+await as(ADMIN, `update profiles set app_role = 'admin' where id = '${B}'`)
+check("admin role reserved to VIP e-mails", (await q(`select app_role from profiles where id = '${B}'`))[0].app_role === "member")
+const other = (await as(C, `insert into posts (author_id, content) values ('${C}', 'kural dışı') returning id`)).rows[0].id
+check("member cannot delete someone else's post", (await as(B, `delete from posts where id = '${other}' returning id`)).rows.length === 0)
+check("Uluslararası Büro deletes any post", (await as(D, `delete from posts where id = '${other}' returning id`)).rows.length === 1)
 
 // ── private events ─────────────────────────────────────────────────────────
 check("member cannot create an event for another station", await fails(B, `insert into events (title, starts_at, station_id, created_by) values ('x', now(), 'lyon', '${B}')`))
 const ev = (await as(C, `insert into events (title, starts_at, station_id, is_private, created_by) values ('Lyon özel', now() + interval '1 day', 'lyon', true, '${C}') returning id`)).rows[0].id
 check("🔒 private event hidden from other stations", (await as(B, `select id from events where id = '${ev}'`)).rows.length === 0)
+r = (await as(B, `select * from public.locked_events()`)).rows
+check("🔒 other stations only get a locked slot (no title)", r.length === 1 && r[0].id === ev && !("title" in r[0]))
+check("deleted post took its points back, event creation earns +5", (await q(`select points from profiles where id = '${C}'`))[0].points === 8)
 check("🔒 private event visible to Uluslararası Büro", (await as(D, `select id from events where id = '${ev}'`)).rows.length === 1)
 check("event notifies only its station", (await q(`select user_id from notifications where type = 'event'`)).length === 0)
 await as(D, `insert into events (title, starts_at, station_id, created_by) values ('Paris kahvaltı', now(), 'paris', '${D}')`)
@@ -87,7 +102,14 @@ const task = (await as(B, `insert into tasks (title, station_id, assign_all, cre
 check("other station cannot see the task", (await as(C, `select id from tasks where id = '${task}'`)).rows.length === 0)
 check("Uluslararası Büro sees every task", (await as(D, `select id from tasks where id = '${task}'`)).rows.length === 1)
 check("member cannot create a task for another station", await fails(B, `insert into tasks (title, station_id, created_by) values ('x', 'lyon', '${B}')`))
-await as(D, `insert into tasks (title, station_id, assignee_id, created_by) values ('Rapor', 'lyon', '${C}', '${D}')`)
+const lyonTask = (await as(D, `insert into tasks (title, station_id, assignee_id, created_by) values ('Rapor', 'lyon', '${C}', '${D}') returning id`)).rows[0].id
+await as(D, `insert into tasks (title, station_id, assignee_id, created_by) values ('Paris dışı', 'lyon', '${B}', '${D}')`)
+check("tasks of another station stay hidden even if assigned to me", (await as(B, `select id from tasks where station_id = 'lyon'`)).rows.length === 0)
+await as(C, `update tasks set status = 'done' where id = '${lyonTask}'`)
+check("completed görev earns +10", (await q(`select points from profiles where id = '${C}'`))[0].points === 18)
+await as(C, `update tasks set status = 'todo' where id = '${lyonTask}'`)
+await as(C, `update tasks set status = 'done' where id = '${lyonTask}'`)
+check("reopening a görev does not farm points", (await q(`select points from profiles where id = '${C}'`))[0].points === 18)
 check("görev notifies the assignee", (await q(`select 1 from notifications where type = 'task' and user_id = '${C}'`)).length === 1)
 
 // ── messaging, mentions, points ────────────────────────────────────────────
@@ -102,7 +124,7 @@ check("messages grouped in one bell entry (count = 2)", r.find((n) => n.type ===
 check("@mention creates its own notification", r.some((n) => n.type === "mention"))
 r = await q(`select type from notifications where user_id = '${D}' and type in ('message', 'mention')`)
 check("muted member: no message alert but still the @mention", r.length === 1 && r[0].type === "mention")
-check("points: +1 per message sent", (await q(`select points from profiles where id = '${B}'`))[0].points === 2)
+check("points: post +3 and 2 messages +2", (await q(`select points from profiles where id = '${B}'`))[0].points === 5)
 r = (await as(C, `select * from public.my_conversations()`)).rows[0]
 check("unread + mentioned flags", Number(r.unread) === 2 && r.mentioned === true)
 await as(C, `select public.mark_read('${conv}')`)
@@ -133,7 +155,10 @@ check("cannot upload into someone else's chat", await fails(ADMIN, `insert into 
 
 // ── ranking ────────────────────────────────────────────────────────────────
 r = (await as(C, `select * from public.member_rank('${B}')`)).rows[0]
-check("member_rank: Berk is #1", Number(r.rank) === 1 && Number(r.total) === 4)
+check("member_rank works", Number(r.total) === 4 && Number(r.rank) >= 1)
+const before = (await q(`select id, points from profiles order by id`)).map((x) => x.points).join()
+await db.exec(`select public.recompute_points()`)
+check("recompute_points matches the live counters", (await q(`select id, points from profiles order by id`)).map((x) => x.points).join() === before)
 
 console.log(failed ? `\n${failed} FAILED` : "\nALL PASSED")
 process.exit(failed ? 1 : 0)

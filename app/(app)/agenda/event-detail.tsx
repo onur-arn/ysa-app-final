@@ -23,6 +23,18 @@ export function EventDetail({ event, onClose, onEdit }: { event: AppEvent | null
   const member = useMemberMap()
   const qc = useQueryClient()
   if (!event) return <Sheet open={false} onClose={onClose}>{null}</Sheet>
+  if (event.locked) {
+    return (
+      <Sheet open onClose={onClose} title={t("agenda.private")}>
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <span className="flex size-16 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600"><Lock className="size-8" /></span>
+          <StationBadge id={event.station_id} />
+          <p className="text-sm text-muted-foreground">{fmtDate(event.starts_at, { weekday: "long", day: "numeric", month: "long" })}</p>
+          <p className="max-w-xs text-sm text-foreground text-pretty">{t("agenda.lockedText")}</p>
+        </div>
+      </Sheet>
+    )
+  }
   const canEdit = event.created_by === me.id || isIntl(me)
   const start = new Date(event.starts_at)
   const end = event.ends_at ? new Date(event.ends_at) : null

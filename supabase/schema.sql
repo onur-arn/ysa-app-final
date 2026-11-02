@@ -77,20 +77,27 @@ language sql stable security definer set search_path = public as $$
   select exists(select 1 from profiles where id = auth.uid() and status = 'active' and (station_id = 'intl' or app_role = 'admin'))
 $$;
 
--- Platform admins of the original app keep their role automatically.
-create or replace function public.is_bootstrap_admin(mail text) returns boolean
-language sql immutable as $$
-  select lower(coalesce(mail, '')) in ('secretaire@youthstation.org', 'president@youthstation.org', 'feyza.simsek09@gmail.com')
+-- 🔐 VIP accounts: the only ones allowed into the Yönetici panel (gold lock in Ayarlar).
+create table if not exists vip_emails (email text primary key);
+insert into vip_emails values ('secretaire@youthstation.org'), ('president@youthstation.org') on conflict do nothing;
+alter table vip_emails enable row level security;   -- no policy: invisible to clients
+
+create or replace function public.is_vip_email(mail text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists(select 1 from vip_emails where email = lower(coalesce(mail, '')))
 $$;
 
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
-  boss boolean := public.is_bootstrap_admin(new.email) or not exists(select 1 from profiles);
+  boss boolean := public.is_vip_email(new.email);
+  photo text := nullif(meta->>'photo_url', '');
 begin
+  -- only accept sign-up photos uploaded through /api/signup-photo
+  if photo is not null and photo not like '%/storage/v1/object/public/media/signup/%' then photo := null; end if;
   insert into profiles (id, email, first_name, last_name, phone, birthday, linkedin, hometown, station_id, position,
-                        igem_trained, igem_date, app_role, status, approved_at)
+                        igem_trained, igem_date, app_role, status, approved_at, photo_url)
   values (
     new.id, new.email,
     coalesce(meta->>'first_name', ''), coalesce(meta->>'last_name', ''),
@@ -99,7 +106,8 @@ begin
     coalesce((meta->>'igem_trained')::boolean, false), nullif(meta->>'igem_date', '')::date,
     case when boss then 'admin' else 'member' end,
     case when boss then 'active' else 'pending' end,
-    case when boss then now() end
+    case when boss then now() end,
+    photo
   )
   on conflict (id) do nothing;
   return new;
@@ -113,6 +121,8 @@ create or replace function public.protect_profile() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   -- trusted database triggers (points for messages) set this flag for one statement
+  -- the admin role is reserved to VIP e-mails, whoever edits the row
+  if new.app_role = 'admin' and not public.is_vip_email(new.email) then new.app_role := 'member'; end if;
   if auth.uid() is null or public.is_admin() or current_setting('ysa.trusted', true) = 'on' then return new; end if;
   new.points := old.points;
   new.app_role := old.app_role;
@@ -151,6 +161,15 @@ language sql stable security definer set search_path = public as $$
   select station_id, position from profiles where position is not null and status in ('active', 'pending')
 $$;
 grant execute on function public.taken_positions() to anon, authenticated;
+
+create or replace function public.add_points(uid uuid, n int) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if uid is null or n = 0 then return; end if;
+  perform set_config('ysa.trusted', 'on', true);
+  update profiles set points = greatest(0, points + n) where id = uid;
+  perform set_config('ysa.trusted', 'off', true);
+end $$;
 
 -- ── NOTIFICATIONS (bell + push) ─────────────────────────────────────────────
 create table if not exists notifications (
@@ -236,7 +255,7 @@ create policy "posts read"   on posts for select to authenticated using (public.
 create policy "posts insert" on posts for insert to authenticated
   with check (author_id = auth.uid() and public.is_active() and kind in ('post', 'igem') and (not pinned or public.is_intl()));
 create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl());
-create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_admin());
+create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
 -- Only Uluslararası Büro may (un)pin, whoever edits the post.
 create or replace function public.posts_guard_pin() returns trigger
@@ -260,7 +279,7 @@ drop policy if exists "pcomments insert" on post_comments;
 drop policy if exists "pcomments delete" on post_comments;
 create policy "pcomments read"   on post_comments for select to authenticated using (public.is_active());
 create policy "pcomments insert" on post_comments for insert to authenticated with check (author_id = auth.uid() and public.is_active());
-create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_admin());
+create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
 -- ── STORIES (24 h, with editor + music) ─────────────────────────────────────
 create table if not exists stories (
@@ -331,6 +350,15 @@ create policy "events update" on events for update to authenticated
   with check (public.is_intl() or station_id = public.my_station());
 create policy "events delete" on events for delete to authenticated using (created_by = auth.uid() or public.is_intl());
 
+-- Private events of other stations: only the time slot is shared, shown as 🔒 without any content.
+create or replace function public.locked_events()
+returns table(id uuid, starts_at timestamptz, ends_at timestamptz, all_day boolean, station_id text)
+language sql stable security definer set search_path = public as $$
+  select e.id, e.starts_at, e.ends_at, e.all_day, e.station_id from events e
+   where public.is_active() and e.is_private and not public.can_see_event(e.station_id, e.is_private, e.created_by)
+     and e.starts_at > now() - interval '6 months'
+$$;
+
 -- ── TASKS (görevler) ────────────────────────────────────────────────────────
 create table if not exists tasks (
   id           uuid primary key default gen_random_uuid(),
@@ -359,7 +387,7 @@ alter table task_comments enable row level security;
 -- Stations only see their own tasks; Uluslararası Büro sees all (as in v1).
 create or replace function public.can_see_task(st text, assignee uuid, creator uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.is_active() and (public.is_intl() or st = public.my_station() or assignee = auth.uid() or creator = auth.uid())
+  select public.is_active() and (public.is_intl() or st = public.my_station())
 $$;
 drop policy if exists "tasks read" on tasks;
 drop policy if exists "tasks insert" on tasks;
@@ -550,9 +578,7 @@ begin
   update conversation_members set last_read_at = new.created_at where conversation_id = new.conversation_id and user_id = new.sender_id;
   if new.kind = 'system' or new.sender_id is null then return null; end if;
 
-  perform set_config('ysa.trusted', 'on', true);
-  update profiles set points = points + 1 where id = new.sender_id;
-  perform set_config('ysa.trusted', 'off', true);
+  perform public.add_points(new.sender_id, 1);
 
   select full_name into sender_name from profiles where id = new.sender_id;
   preview := case new.kind
@@ -706,7 +732,70 @@ drop trigger if exists comments_notify on post_comments;
 create trigger comments_notify after insert on post_comments for each row execute function public.comments_notify();
 
 -- ── POINTS & GRADES ─────────────────────────────────────────────────────────
--- Points = messages sent. The ranking is computed live for the profile sheet.
+-- The more active a member is, the higher they climb:
+--   görev completed +10 · event created +5 · post +3 · story +2 · comment +2
+--   like +1 · poll vote +1 · task comment +1 · message +1
+-- Every rule works both ways (unlike, deleted post, reopened task…) so points cannot be farmed.
+create or replace function public.points_for_post() returns trigger language plpgsql security definer set search_path = public as $$
+declare r posts := case when tg_op = 'DELETE' then old else new end;
+begin
+  perform public.add_points(r.author_id, (case when r.kind = 'welcome' then 0 else 3 end) * (case when tg_op = 'DELETE' then -1 else 1 end));
+  return null;
+end $$;
+drop trigger if exists points_post on posts;
+create trigger points_post after insert or delete on posts for each row execute function public.points_for_post();
+
+create or replace function public.points_simple() returns trigger language plpgsql security definer set search_path = public as $$
+declare row jsonb := to_jsonb(case when tg_op = 'DELETE' then old else new end);
+begin
+  perform public.add_points(
+    coalesce(row->>'author_id', row->>'created_by', row->>'user_id')::uuid,
+    (case tg_table_name when 'post_comments' then 2 when 'stories' then 2 when 'events' then 5 else 1 end)
+      * (case when tg_op = 'DELETE' then -1 else 1 end));
+  return null;
+end $$;
+drop trigger if exists points_comment on post_comments;
+drop trigger if exists points_like on post_likes;
+drop trigger if exists points_story on stories;
+drop trigger if exists points_event on events;
+drop trigger if exists points_vote on poll_votes;
+drop trigger if exists points_tcomment on task_comments;
+create trigger points_comment after insert or delete on post_comments for each row execute function public.points_simple();
+create trigger points_like after insert or delete on post_likes    for each row execute function public.points_simple();
+create trigger points_story after insert or delete on stories       for each row execute function public.points_simple();
+create trigger points_event after insert or delete on events        for each row execute function public.points_simple();
+create trigger points_vote after insert or delete on poll_votes    for each row execute function public.points_simple();
+create trigger points_tcomment after insert or delete on task_comments for each row execute function public.points_simple();
+
+-- A finished görev rewards its assignee ("Tüm ekip" tasks: shared, no individual points).
+create or replace function public.points_task_done() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'done' and old.status <> 'done' then
+    perform public.add_points(new.assignee_id, 10);
+  elsif old.status = 'done' and new.status <> 'done' then
+    perform public.add_points(old.assignee_id, -10);
+  end if;
+  return null;
+end $$;
+drop trigger if exists points_task on tasks;
+create trigger points_task after update of status on tasks for each row execute function public.points_task_done();
+
+-- Recomputes everyone's score from the data (run at the end of this script).
+create or replace function public.recompute_points() returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform set_config('ysa.trusted', 'on', true);
+  update profiles p set points =
+      (select count(*) from messages m where m.sender_id = p.id and m.kind <> 'system')
+    + (select count(*) * 3 from posts x where x.author_id = p.id and x.kind <> 'welcome')
+    + (select count(*) * 2 from post_comments x where x.author_id = p.id)
+    + (select count(*) from post_likes x where x.user_id = p.id)
+    + (select count(*) * 2 from stories x where x.author_id = p.id)
+    + (select count(*) * 5 from events x where x.created_by = p.id)
+    + (select count(*) from poll_votes x where x.user_id = p.id)
+    + (select count(*) from task_comments x where x.author_id = p.id)
+    + (select count(*) * 10 from tasks x where x.status = 'done' and x.assignee_id = p.id);
+  perform set_config('ysa.trusted', 'off', true);
+end $$;
 create or replace function public.member_rank(uid uuid) returns table(points int, rank bigint, total bigint)
 language sql stable security definer set search_path = public as $$
   select p.points,
@@ -756,3 +845,6 @@ begin
     exception when duplicate_object then null; end;
   end loop;
 end $$;
+
+-- Keep scores consistent with the data every time this script runs.
+select public.recompute_points();

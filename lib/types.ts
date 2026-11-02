@@ -77,6 +77,8 @@ export type AppEvent = {
   is_private: boolean
   created_by: string | null
   created_at: string
+  /** private event of another station: only the time slot is known (🔒) */
+  locked?: boolean
 }
 
 export type TaskStatus = "todo" | "in_progress" | "done"

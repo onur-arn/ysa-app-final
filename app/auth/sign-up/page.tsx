@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, Mail, MailCheck, User } from "lucide-react"
+import { ArrowLeft, ArrowRight, Camera, Check, Eye, EyeOff, Lock, Mail, MailCheck, User } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
@@ -10,6 +10,7 @@ import { BOARD_POSITIONS, EXECUTIVE_POSITIONS, HOMETOWNS } from "@/lib/constants
 import { createClient } from "@/lib/supabase/client"
 import { useI18n } from "@/lib/i18n/context"
 import type { Station } from "@/lib/types"
+import { compressImage } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { AuthFrame, IconInput } from "../auth-frame"
 
@@ -48,6 +49,7 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [photo, setPhoto] = useState<File | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -64,6 +66,7 @@ export default function SignUpPage() {
 
   function validate(): string | null {
     if (step === 0) {
+      if (!photo) return t("auth.err.photo")
       if (!form.first_name.trim() || !form.last_name.trim()) return t("auth.err.name")
       if (!/^\S+@\S+\.\S+$/.test(form.email)) return t("auth.err.email")
       if (form.password.length < 8) return t("auth.pwTooShort")
@@ -80,6 +83,15 @@ export default function SignUpPage() {
     if (step < 2) return setStep(step + 1)
 
     setLoading(true)
+    const body = new FormData()
+    body.append("file", await compressImage(photo!, 800, 0.85))
+    const up = await fetch("/api/signup-photo", { method: "POST", body }).then((r) => r.json()).catch(() => ({}))
+    if (!up.url) {
+      setLoading(false)
+      setStep(0)
+      setError(t("auth.err.photoUpload"))
+      return
+    }
     const { error } = await createClient().auth.signUp({
       email: form.email.trim(),
       password: form.password,
@@ -96,6 +108,7 @@ export default function SignUpPage() {
           birthday: form.birthday,
           hometown: form.hometown,
           linkedin: form.linkedin.trim(),
+          photo_url: up.url,
         },
       },
     })
@@ -137,6 +150,19 @@ export default function SignUpPage() {
       <div className="flex flex-col gap-4">
         {step === 0 && (
           <>
+            <label className="flex cursor-pointer flex-col items-center gap-2">
+              <span className={cn("relative flex size-24 items-center justify-center overflow-hidden rounded-full border-2", photo ? "border-primary" : "border-dashed border-primary/50 bg-primary/5")}>
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={URL.createObjectURL(photo)} alt="" className="size-full object-cover" />
+                ) : (
+                  <Camera className="size-8 text-primary" />
+                )}
+              </span>
+              <span className="text-sm font-semibold text-primary">{photo ? t("auth.changePhoto") : t("auth.addPhoto")}</span>
+              <span className="text-[11px] text-muted-foreground">{t("auth.photoRequired")}</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <Field label={t("profile.firstName")}>
                 <IconInput icon={User} value={form.first_name} onChange={(e) => set("first_name", e.target.value)} autoComplete="given-name" />

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueryClient } from "@tanstack/react-query"
-import { Bell, BellRing, Camera, GraduationCap, KeyRound, Languages, LogOut, Moon, ShieldCheck, Sun, Trash2, UserRound } from "lucide-react"
+import { Bell, BellRing, Camera, GraduationCap, KeyRound, Lock, LogOut, Moon, Sun, Trash2, UserRound } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -15,7 +15,6 @@ import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { HOMETOWNS } from "@/lib/constants"
 import { qk } from "@/lib/data/keys"
-import { LANGS } from "@/lib/i18n/config"
 import { useI18n } from "@/lib/i18n/context"
 import { isAdmin } from "@/lib/permissions"
 import { disablePush, enablePush, pushEnabled, pushSupported } from "@/lib/push"
@@ -27,7 +26,7 @@ import { cn } from "@/lib/utils"
 
 export function SettingsClient() {
   const { me } = useApp()
-  const { t, lang, setLang } = useI18n()
+  const { t } = useI18n()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const qc = useQueryClient()
@@ -140,15 +139,6 @@ export function SettingsClient() {
 
       <div className="mt-4"><PointsCard userId={me.id} /></div>
 
-      {isAdmin(me) && (
-        <Link href="/yonetici" className="mt-4">
-          <Card className="flex items-center gap-3 border-primary/30 bg-primary/5">
-            <ShieldCheck className="size-5 text-primary" />
-            <span className="flex-1 text-sm font-semibold text-foreground">{t("nav.admin")}</span>
-            <span className="text-primary">→</span>
-          </Card>
-        </Link>
-      )}
 
       <SectionTitle><span className="flex items-center gap-1.5"><UserRound className="size-3.5" /> {t("settings.profileInfo")}</span></SectionTitle>
       <Card className="flex flex-col gap-3">
@@ -183,17 +173,12 @@ export function SettingsClient() {
         <Button variant="secondary" size="sm" onClick={() => setIgem(true)}>{t("settings.igemRequestBtn")}</Button>
       </Card>
 
-      <SectionTitle><span className="flex items-center gap-1.5"><Languages className="size-3.5" /> {t("settings.appearance")}</span></SectionTitle>
+      <SectionTitle><span className="flex items-center gap-1.5"><Sun className="size-3.5" /> {t("settings.appearance")}</span></SectionTitle>
       <Card className="flex flex-col gap-3">
-        <div className="grid grid-cols-3 gap-2">
-          {LANGS.map((l) => (
-            <button key={l.code} onClick={() => setLang(l.code)} className={cn("rounded-2xl border py-2.5 text-sm font-semibold", lang === l.code ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>{l.flag} {l.label}</button>
-          ))}
-        </div>
         <div className="grid grid-cols-2 gap-2">
           {(["light", "dark"] as const).map((m) => (
-            <button key={m} onClick={() => setTheme(m)} className={cn("flex items-center justify-center gap-2 rounded-2xl border py-2.5 text-sm font-semibold", theme === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-              {m === "light" ? <Sun className="size-4" /> : <Moon className="size-4" />} {t(m === "light" ? "settings.lightMode" : "settings.darkMode")}
+            <button key={m} onClick={() => setTheme(m)} aria-label={t(m === "light" ? "settings.lightMode" : "settings.darkMode")} className={cn("flex items-center justify-center gap-2 rounded-2xl border py-2.5 text-sm font-semibold", theme === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+              {m === "light" ? <Sun className="size-5" /> : <Moon className="size-5" />}
             </button>
           ))}
         </div>
@@ -208,7 +193,17 @@ export function SettingsClient() {
         <Button variant="outline" onClick={logout}><LogOut className="size-4" /> {t("settings.logout")}</Button>
         <Button variant="ghost" onClick={deleteAccount} className="text-destructive"><Trash2 className="size-4" /> {t("settings.deleteAccount")}</Button>
       </Card>
-      <p className="mt-6 text-center text-[11px] text-muted-foreground">{t("settings.version")}</p>
+      <div className="mb-4 mt-6 flex flex-col items-center gap-1.5 text-center text-[11px] text-muted-foreground/60">
+        <p><span className="font-medium text-muted-foreground/80">Onur Arslan</span> tarafından geliştirilmiştir.</p>
+        <p>Bilgi için <a href="mailto:secretaire@youthstation.org" className="underline underline-offset-2 hover:text-primary">secretaire@youthstation.org</a></p>
+        <p>{t("settings.version")}</p>
+        {/* 🔐 VIP only (secretaire@ / president@): discreet gold lock to the Yönetici panel */}
+        {isAdmin(me) && (
+          <Link href="/yonetici" aria-label="Yönetici" title="Yönetici" className="mt-1 flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-white shadow-md shadow-amber-500/30 transition-transform active:scale-90">
+            <Lock className="size-4" strokeWidth={2.4} />
+          </Link>
+        )}
+      </div>
 
       <Sheet open={igem} onClose={() => setIgem(false)} title={t("feed.igem")} footer={<Button className="w-full" size="lg" onClick={sendIgem}>{t("common.send")}</Button>}>
         <Field label={t("settings.igemMotivation")}><Textarea value={motivation} onChange={(e) => setMotivation(e.target.value)} placeholder={t("settings.igemMotivationPlaceholder")} className="min-h-32" /></Field>

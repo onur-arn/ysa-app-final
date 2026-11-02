@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Cake, CalendarCheck, GraduationCap, Link2, Mail, MapPin, MessageCircle, Phone, Trophy } from "lucide-react"
+import { Cake, CalendarCheck, GraduationCap, Link2, Mail, MapPin, MessageCircle, Phone, Trash2, Trophy } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Avatar } from "@/components/avatar"
@@ -15,7 +15,7 @@ import { useApp } from "@/components/providers/app-context"
 import { POSITIONS } from "@/lib/constants"
 import { useMemberMap, useMembers } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
-import { LEVELS, levelOf } from "@/lib/levels"
+import { LEVELS, levelOf, POINT_RULES } from "@/lib/levels"
 import { isIntl } from "@/lib/permissions"
 import { useOnline } from "@/lib/realtime/hub"
 import { createClient } from "@/lib/supabase/client"
@@ -67,7 +67,14 @@ export function PointsCard({ userId }: { userId: string }) {
           <span key={l.key} title={t(`level.${l.key}`)} className={i <= lvl.index ? "text-base" : "text-base opacity-25 grayscale"}>{l.emoji}</span>
         ))}
       </div>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">{t("points.how")}</p>
+      <details className="mt-2 text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer text-center font-medium">{t("points.how")}</summary>
+        <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+          {POINT_RULES.map((r) => (
+            <span key={r.key} className="flex items-center justify-between"><span>{r.emoji} {t(`points.rule.${r.key}`)}</span><b className="text-foreground">+{r.points}</b></span>
+          ))}
+        </div>
+      </details>
     </div>
   )
 }
@@ -94,6 +101,14 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
     if (error) return toast(t("common.error"), { error: true })
     onClose()
     router.push(`/messages/${data}`)
+  }
+
+  async function deleteAccount() {
+    if (prompt(t("admin.deleteConfirm", { name: p!.full_name })) !== "DELETE") return
+    const res = await fetch("/api/admin/delete-user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: p!.id }) })
+    if (!res.ok) return toast(t("common.error"), { error: true })
+    toast(t("common.deleted"))
+    onClose()
   }
 
   async function savePosition() {
@@ -145,6 +160,10 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
           return r.href ? <a key={i} href={r.href} target={r.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="hover:bg-secondary/50">{inner}</a> : <div key={i}>{inner}</div>
         })}
       </div>
+
+      {isIntl(me) && p.id !== me.id && p.app_role !== "admin" && (
+        <Button variant="ghost" className="mt-3 w-full text-destructive" onClick={deleteAccount}><Trash2 className="size-4" /> {t("directory.deleteAccount")}</Button>
+      )}
 
       {isIntl(me) && (
         <div className="mt-4 rounded-2xl border border-dashed border-border p-3">

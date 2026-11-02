@@ -1,11 +1,23 @@
-/** Grades earned with messages sent (1 message = 1 point). */
+/** Grades earned through activity in the app (see POINT_RULES / supabase/schema.sql). */
 export const LEVELS = [
   { min: 0, key: "rookie", emoji: "🌱", color: "150 55% 42%" },
-  { min: 25, key: "talker", emoji: "💬", color: "199 89% 45%" },
-  { min: 100, key: "active", emoji: "⭐", color: "45 90% 45%" },
-  { min: 250, key: "master", emoji: "🔥", color: "24 90% 52%" },
-  { min: 500, key: "ambassador", emoji: "🏅", color: "280 55% 55%" },
-  { min: 1000, key: "legend", emoji: "👑", color: "350 75% 55%" },
+  { min: 50, key: "talker", emoji: "🤝", color: "199 89% 45%" },
+  { min: 150, key: "active", emoji: "⭐", color: "45 90% 45%" },
+  { min: 400, key: "master", emoji: "🔥", color: "24 90% 52%" },
+  { min: 800, key: "ambassador", emoji: "🏅", color: "280 55% 55%" },
+  { min: 1500, key: "legend", emoji: "👑", color: "350 75% 55%" },
+] as const
+
+/** Mirrors the point triggers in the database */
+export const POINT_RULES = [
+  { key: "task", points: 10, emoji: "✅" },
+  { key: "event", points: 5, emoji: "📅" },
+  { key: "post", points: 3, emoji: "📝" },
+  { key: "story", points: 2, emoji: "📸" },
+  { key: "comment", points: 2, emoji: "💬" },
+  { key: "like", points: 1, emoji: "❤️" },
+  { key: "vote", points: 1, emoji: "📊" },
+  { key: "message", points: 1, emoji: "✉️" },
 ] as const
 
 export function levelOf(points: number) {

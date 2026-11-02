@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { ProfileSheet } from "@/components/profile/profile-sheet"
 import { Button } from "@/components/ui/button"
-import { Card, EmptyState, Fab } from "@/components/ui/misc"
+import { Card, EmptyState } from "@/components/ui/misc"
 import { useApp } from "@/components/providers/app-context"
 import { useFeed, useMembers } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
@@ -71,7 +71,6 @@ export function FeedClient() {
           posts.map((p) => <PostCard key={p.id} post={p} highlight={p.id === focus} onOpenProfile={setProfile} />)
         )}
       </div>
-      <Fab icon={PenSquare} label={t("feed.publish")} onClick={() => setComposer(true)} />
       <Composer open={composer} onClose={() => setComposer(false)} />
       <ProfileSheet memberId={profile} onClose={() => setProfile(null)} />
     </div>

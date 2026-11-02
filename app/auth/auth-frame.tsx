@@ -4,28 +4,14 @@ import { motion } from "framer-motion"
 import { Moon, Sun } from "lucide-react"
 import type { ReactNode } from "react"
 import { Logo } from "@/components/logo"
-import { LANGS } from "@/lib/i18n/config"
-import { useI18n } from "@/lib/i18n/context"
 import { useTheme } from "@/lib/theme/context"
 import { cn } from "@/lib/utils"
 
 export function AuthFrame({ title, subtitle, children, wide }: { title: string; subtitle?: string; children: ReactNode; wide?: boolean }) {
   const { theme, toggle } = useTheme()
-  const { lang, setLang } = useI18n()
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
       <div className="absolute right-4 top-4 flex items-center gap-2">
-        <div className="flex rounded-xl border border-border bg-card p-0.5">
-          {LANGS.map((l) => (
-            <button
-              key={l.code}
-              onClick={() => setLang(l.code)}
-              className={cn("rounded-lg px-2 py-1 text-xs font-bold uppercase", lang === l.code ? "bg-primary/10 text-primary" : "text-muted-foreground")}
-            >
-              {l.code}
-            </button>
-          ))}
-        </div>
         <button
           onClick={toggle}
           aria-label="Theme"

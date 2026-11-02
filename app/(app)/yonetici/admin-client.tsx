@@ -138,7 +138,7 @@ function MemberEditor({ profile, onClose }: { profile: Profile | null; onClose: 
 
   async function save() {
     setLoading(true)
-    const { error } = await createClient().from("profiles").update({ app_role: v.app_role, status: v.status, station_id: v.station_id, position: v.position || null }).eq("id", profile!.id)
+    const { error } = await createClient().from("profiles").update({ status: v.status, station_id: v.station_id, position: v.position || null }).eq("id", profile!.id)
     setLoading(false)
     if (error) return toast(error.message.includes("unique") ? t("directory.positionTaken") : t("common.error"), { error: true })
     toast(t("common.saved"))
@@ -160,13 +160,7 @@ function MemberEditor({ profile, onClose }: { profile: Profile | null; onClose: 
     <Sheet open onClose={close} title={profile.full_name} footer={<Button className="w-full" size="lg" onClick={save} loading={loading}>{t("common.save")}</Button>}>
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">{profile.email} · {profile.points} {t("points.points")}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t("admin.role")}>
-            <Select value={v.app_role} disabled={self} onChange={(e) => setDraft({ ...draft, app_role: e.target.value as Profile["app_role"] })}>
-              <option value="member">{t("profile.member")}</option>
-              <option value="admin">Admin</option>
-            </Select>
-          </Field>
+        <div className="grid grid-cols-1 gap-3">
           <Field label={t("admin.statusLabel")}>
             <Select value={v.status} disabled={self} onChange={(e) => setDraft({ ...draft, status: e.target.value as Profile["status"] })}>
               {["active", "suspended", "rejected"].map((s) => <option key={s} value={s}>{t(`admin.status.${s}`)}</option>)}
