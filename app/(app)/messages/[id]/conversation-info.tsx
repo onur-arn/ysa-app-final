@@ -30,6 +30,7 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
   const supabase = createClient()
   const [adding, setAdding] = useState<string[] | null>(null)
   const [name, setName] = useState(conv.name ?? "")
+  const [handover, setHandover] = useState(false)
   const mine = conv.conversation_members.find((m) => m.user_id === me.id)
   const groupAdmin = !!mine?.is_admin || isAdmin(me)
   const other = conv.type === "dm" ? conv.conversation_members.find((m) => m.user_id !== me.id)?.user_id : null
@@ -56,8 +57,21 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
     refresh()
   }
 
-  async function leave() {
-    if (!confirm(t("messages.confirmLeave"))) return
+  async function makeAdmin(userId: string, value: boolean) {
+    const { error } = await supabase.from("conversation_members").update({ is_admin: value }).eq("conversation_id", conv.id).eq("user_id", userId)
+    if (error) return toast(t("common.error"), { error: true })
+    if (value) await supabase.from("messages").insert({ conversation_id: conv.id, sender_id: me.id, kind: "system", content: t("messages.madeAdmin", { name: me.full_name, who: member(userId)?.full_name ?? "" }) })
+    refresh()
+  }
+
+  // The last admin must hand the group over before leaving.
+  const others = conv.conversation_members.filter((m) => m.user_id !== me.id)
+  const mustHandOver = !!mine?.is_admin && others.length > 0 && !others.some((m) => m.is_admin)
+
+  async function leave(successor?: string) {
+    if (mustHandOver && !successor) return setHandover(true)
+    if (!successor && !confirm(t("messages.confirmLeave"))) return
+    if (successor) await makeAdmin(successor, true)
     await supabase.from("messages").insert({ conversation_id: conv.id, sender_id: me.id, kind: "system", content: t("messages.left", { name: me.full_name }) })
     await supabase.from("conversation_members").delete().eq("conversation_id", conv.id).eq("user_id", me.id)
     router.push("/messages")
@@ -141,18 +155,35 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
                           </span>
                         </button>
                         {groupAdmin && m.user_id !== me.id && (
-                          <button onClick={() => kick(m.user_id)} className="text-muted-foreground hover:text-destructive" aria-label="remove"><X className="size-4" /></button>
+                          <>
+                            <button onClick={() => makeAdmin(m.user_id, !m.is_admin)} className={m.is_admin ? "rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary" : "rounded-full border border-border px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-primary"}>
+                              {m.is_admin ? t("messages.removeAdmin") : t("messages.makeAdmin")}
+                            </button>
+                            <button onClick={() => kick(m.user_id)} className="text-muted-foreground hover:text-destructive" aria-label="remove"><X className="size-4" /></button>
+                          </>
                         )}
                       </div>
                     )
                   })
               )}
             </div>
-            <Button variant="outline" onClick={leave} className="text-destructive"><LogOut className="size-4" /> {t("messages.leave")}</Button>
+            <Button variant="outline" onClick={() => leave()} className="text-destructive"><LogOut className="size-4" /> {t("messages.leave")}</Button>
             {groupAdmin && <Button variant="ghost" onClick={remove} className="text-destructive"><Trash2 className="size-4" /> {t("messages.deleteGroup")}</Button>}
           </>
         )}
       </div>
+      <Sheet open={handover} onClose={() => setHandover(false)} title={t("messages.pickAdmin")}>
+        <p className="mb-3 text-sm text-muted-foreground">{t("messages.pickAdminText")}</p>
+        <div className="flex flex-col gap-1">
+          {others.map((m) => (
+            <button key={m.user_id} onClick={() => { setHandover(false); void leave(m.user_id) }} className="flex items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-secondary">
+              <MemberAvatar id={m.user_id} size={38} />
+              <span className="flex-1 truncate text-sm font-medium text-foreground">{member(m.user_id)?.full_name}</span>
+              <span className="text-xs font-semibold text-primary">{t("messages.makeAdmin")}</span>
+            </button>
+          ))}
+        </div>
+      </Sheet>
     </Sheet>
   )
 }

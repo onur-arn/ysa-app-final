@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowDown, ArrowLeft, Info, Pin, Users, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, Pin, Users, X } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
@@ -194,9 +194,6 @@ export function ChatThread({ id }: { id: string }) {
           </span>
         </button>
         {!isGroup && other && <PhoneButton phone={other.phone} />}
-        {conv && (
-          <button onClick={() => setInfo(true)} className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary" aria-label="info"><Info className="size-5" /></button>
-        )}
       </div>
 
       {/* pinned */}

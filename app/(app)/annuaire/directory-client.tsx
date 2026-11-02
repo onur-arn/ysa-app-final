@@ -5,18 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { MemberAvatar } from "@/components/avatar"
 import { ProfileSheet } from "@/components/profile/profile-sheet"
-import { StationBadge } from "@/components/station-badge"
 import { Card, Chips, EmptyState, Segmented } from "@/components/ui/misc"
 import { useApp } from "@/components/providers/app-context"
 import { useMembers } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
 import { levelOf } from "@/lib/levels"
-import { useHub } from "@/lib/realtime/hub"
 
 export function DirectoryClient() {
   const { t } = useI18n()
-  const { me, stations } = useApp()
-  const { online } = useHub()
+  const { me, stations, station } = useApp()
   const router = useRouter()
   const params = useSearchParams()
   const { data: members = [] } = useMembers()
@@ -33,7 +30,14 @@ export function DirectoryClient() {
   }, [members, q, st])
 
   const ranking = [...list].sort((a, b) => b.points - a.points).slice(0, 50)
-  const onlineCount = members.filter((m) => online.has(m.id)).length
+  const letters = useMemo(() => {
+    const map = new Map<string, typeof list>()
+    for (const p of [...list].sort((a, b) => a.full_name.localeCompare(b.full_name, "tr"))) {
+      const l = (p.full_name.charAt(0) || "#").toLocaleUpperCase("tr")
+      map.set(l, [...(map.get(l) ?? []), p])
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, "tr"))
+  }, [list])
 
   function close() {
     setOpen(null)
@@ -54,29 +58,25 @@ export function DirectoryClient() {
 
       {tab === "list" ? (
         <>
-          <p className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-emerald-500" /> {t("directory.onlineNow", { n: onlineCount })}</p>
+          <p className="px-1 text-xs text-muted-foreground">{list.length} {t("directory.memberCount")}</p>
           {list.length === 0 ? <EmptyState icon={Users} title={t("directory.noMember")} /> : (
-            <Card className="divide-y divide-border/70 p-0">
-              {[...list].sort((a, b) => a.full_name.localeCompare(b.full_name, "tr")).map((p, i, arr) => {
-                const lvl = levelOf(p.points)
-                const letter = p.full_name.charAt(0).toLocaleUpperCase("tr")
-                const newLetter = i === 0 || arr[i - 1].full_name.charAt(0).toLocaleUpperCase("tr") !== letter
-                return (
-                  <div key={p.id}>
-                    {newLetter && <p className="bg-secondary/50 px-4 py-1 text-[11px] font-bold text-muted-foreground first:rounded-t-2xl">{letter}</p>}
-                    <button onClick={() => setOpen(p.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-secondary/50">
-                      <MemberAvatar id={p.id} size={42} />
+            <div className="-mx-4 flex flex-col">
+              {letters.map(([letter, people]) => (
+                <div key={letter}>
+                  {/* v1 style: sticky letter header */}
+                  <div className="sticky top-[61px] z-[1] bg-background/95 px-4 py-1 text-xs font-bold text-primary backdrop-blur">{letter}</div>
+                  {people.map((p) => (
+                    <button key={p.id} onClick={() => setOpen(p.id)} className="flex w-full items-center gap-3 border-b border-border/70 px-4 py-3 text-left transition-colors active:bg-secondary">
+                      <MemberAvatar id={p.id} size={44} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-foreground">{p.full_name}{p.id === me.id && <span className="ml-1 text-xs font-normal text-muted-foreground">({t("messages.you")})</span>}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{p.position ?? t("profile.member")}</span>
+                        <span className="block truncate font-semibold text-foreground">{p.full_name}{p.id === me.id && <span className="ml-1 text-xs font-normal text-muted-foreground">({t("messages.you")})</span>}</span>
+                        <span className="block truncate text-sm text-muted-foreground">{p.position ? `${p.position} · ` : ""}{station(p.station_id)?.name}</span>
                       </span>
-                      <StationBadge id={p.station_id} short className="px-2 py-0 text-[10px]" />
-                      <span className="w-5 text-center text-sm" title={t(`level.${lvl.current.key}`)}>{lvl.current.emoji}</span>
                     </button>
-                  </div>
-                )
-              })}
-            </Card>
+                  ))}
+                </div>
+              ))}
+            </div>
           )}
         </>
       ) : (
