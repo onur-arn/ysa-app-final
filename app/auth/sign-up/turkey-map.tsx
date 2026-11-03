@@ -6,12 +6,16 @@ import { HOMETOWNS } from "@/lib/constants"
 const TURKEY_GEO_URL =
   "https://raw.githubusercontent.com/cihadturhan/tr-geojson/master/geo/tr-cities-utf8.json"
 
+/** The GeoJSON uses short names where the official province name differs */
+const GEO_ALIASES: Record<string, string> = { Afyon: "Afyonkarahisar" }
+
 function sehirName(s: string) {
-  return s
+  return Object.keys(GEO_ALIASES).find((geo) => GEO_ALIASES[geo] === s) ?? s
 }
 
 function nameToSehir(name: string) {
-  return HOMETOWNS.find((s) => s.toLocaleLowerCase("tr") === name.toLocaleLowerCase("tr")) ?? name
+  const official = GEO_ALIASES[name] ?? name
+  return HOMETOWNS.find((s) => s.toLocaleLowerCase("tr") === official.toLocaleLowerCase("tr")) ?? official
 }
 
 export function TurkeyMap({

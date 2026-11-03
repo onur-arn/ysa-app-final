@@ -151,7 +151,7 @@ export function MessageBubble({
                 className={cn("absolute bottom-full z-50 mb-1 w-48 overflow-hidden rounded-2xl border border-border bg-popover p-1 text-foreground shadow-2xl", mine ? "right-0" : "left-0")}
               >
                 <MenuItem icon={CornerUpLeft} onClick={() => { setMenu(false); onReply() }}>{t("messages.reply")}</MenuItem>
-                {m.content && <MenuItem icon={Copy} onClick={() => { setMenu(false); void navigator.clipboard.writeText(m.content!) }}>{t("messages.copy")}</MenuItem>}
+                {m.content && <MenuItem icon={Copy} onClick={() => { setMenu(false); void navigator.clipboard?.writeText(m.content!) }}>{t("messages.copy")}</MenuItem>}
                 {canPin && !m.deleted_at && <MenuItem icon={Pin} onClick={() => { setMenu(false); onPin() }}>{t("messages.pin")}</MenuItem>}
                 {mine && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={() => { setMenu(false); onDelete() }}>{t("common.delete")}</MenuItem>}
               </motion.div>

@@ -127,6 +127,8 @@ type StepProps = { f: Form; set: <K extends keyof Form>(k: K, v: Form[K]) => voi
 function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | null; setPhoto: (p: File | null) => void; onNext: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [show, setShow] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [taken, setTaken] = useState("")
   const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   const emailOk = /^\S+@\S+\.\S+$/.test(f.email)
   // every field is required except LinkedIn — "Devam et" simply stays grey until then
@@ -139,7 +141,16 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
         <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">İletişim bilgileri</h1>
         <p className="mt-1 text-sm text-muted-foreground">Adım 1 / 3</p>
       </div>
-      <form id="signup-1" onSubmit={(e) => { e.preventDefault(); if (canNext) onNext() }} className="flex flex-col gap-6 pb-8">
+      <form id="signup-1" onSubmit={async (e) => {
+        e.preventDefault()
+        if (!canNext || checking) return
+        // an address can only be used once: say so now, not after the last step
+        setChecking(true)
+        const res = await fetch(`/api/signup?email=${encodeURIComponent(f.email.trim())}`).then((r) => r.json()).catch(() => ({ taken: false }))
+        setChecking(false)
+        if (res.taken) setTaken(f.email.trim().toLowerCase())
+        else onNext()
+      }} className="flex flex-col gap-6 pb-8">
         <div className="mb-2 flex flex-col items-center gap-2">
           <button type="button" onClick={() => fileRef.current?.click()} className="group relative flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-card transition-colors hover:border-primary">
             {preview ? (
@@ -159,6 +170,7 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
           <Field label="Soyad" icon={User}><input required value={f.last_name} onChange={(e) => set("last_name", e.target.value)} placeholder="Kılınç" autoComplete="family-name" className={field} /></Field>
         </div>
         <Field label="E-posta" icon={Mail}><input type="email" required value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="uye@youthstation.org" autoComplete="email" className={field} /></Field>
+        {!!taken && taken === f.email.trim().toLowerCase() && <p className="-mt-4 text-xs font-medium text-destructive">Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.</p>}
         <Field label="Şifre" icon={Lock}>
           <input type={show ? "text" : "password"} required minLength={8} value={f.password} onChange={(e) => set("password", e.target.value)} placeholder="En az 8 karakter" autoComplete="new-password" className={cn(field, "pr-10")} />
           <button type="button" tabIndex={-1} onClick={() => setShow((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Şifreyi göster">
@@ -169,7 +181,7 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
         <Field label="Doğum tarihi" icon={Cake}><input type="date" value={f.birthday} onChange={(e) => set("birthday", e.target.value)} className={cn(field, "[appearance:none]")} /></Field>
         <Field label="LinkedIn" icon={ExternalLink}><input type="url" value={f.linkedin} onChange={(e) => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/…" className={field} /></Field>
       </form>
-      <AuthFooter><Button type="submit" form="signup-1" size="lg" className="w-full" disabled={!canNext}>Devam et</Button></AuthFooter>
+      <AuthFooter><Button type="submit" form="signup-1" size="lg" className="w-full" disabled={!canNext || checking || (!!taken && taken === f.email.trim().toLowerCase())}>{checking ? <Loader2 className="size-4 animate-spin" /> : "Devam et"}</Button></AuthFooter>
     </div>
   )
 }

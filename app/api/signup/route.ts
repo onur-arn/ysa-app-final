@@ -49,3 +49,11 @@ export async function POST(req: NextRequest) {
   await notifyAdminsOfSignup(email).catch((e) => console.error("[signup] admin e-mail failed:", e))
   return NextResponse.json({ ok: true, active: false })
 }
+
+/** Step 1 check: tells the form right away that an address is already registered. */
+export async function GET(req: NextRequest) {
+  const email = (req.nextUrl.searchParams.get("email") ?? "").trim().toLowerCase()
+  if (!/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ taken: false })
+  const { data } = await createAdminClient().from("profiles").select("id").eq("email", email).limit(1)
+  return NextResponse.json({ taken: !!data?.length })
+}

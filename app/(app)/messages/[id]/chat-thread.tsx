@@ -124,7 +124,7 @@ export function ChatThread({ id }: { id: string }) {
   async function send(o: Outgoing) {
     stick.current = true
     const temp: Message = {
-      id: `temp-${crypto.randomUUID()}`, conversation_id: id, sender_id: me.id, kind: o.kind, content: null, attachment_url: null,
+      id: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`, conversation_id: id, sender_id: me.id, kind: o.kind, content: null, attachment_url: null,
       attachment_name: null, attachment_size: null, mentions: [], reply_to: replyTo?.id ?? null, deleted_at: null, created_at: new Date().toISOString(), pending: true,
     }
     const row: Partial<Message> = { conversation_id: id, sender_id: me.id, kind: o.kind, reply_to: replyTo?.id ?? null }
