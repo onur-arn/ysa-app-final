@@ -2,10 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
-import { GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Sparkles, Trash2 } from "lucide-react"
+import { GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { FileChip } from "@/components/file-chip"
+import { Logo } from "@/components/logo"
 import { PollView } from "@/components/poll-view"
 import { StationBadge } from "@/components/station-badge"
 import { Card, Pill } from "@/components/ui/misc"
@@ -79,7 +80,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
 
   const header =
     post.kind === "welcome" ? (
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-400 text-white"><Sparkles className="size-5" /></span>
+      <Logo size={40} className="shrink-0 rounded-full ring-2 ring-primary/30" />
     ) : (
       <button onClick={() => post.author_id && onOpenProfile(post.author_id)}><MemberAvatar id={post.author_id} size={40} /></button>
     )
@@ -91,7 +92,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
         {header}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="truncate text-sm font-semibold text-foreground">{post.kind === "welcome" ? "YSA Uygulaması" : author?.full_name ?? t("common.formerMember")}</p>
+            <p className="truncate text-sm font-semibold text-foreground">{post.kind === "welcome" ? "YouthStation" : author?.full_name ?? t("common.formerMember")}</p>
             {post.kind === "igem" && <Pill tone="violet"><GraduationCap className="size-3" /> {t("feed.igem")}</Pill>}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">

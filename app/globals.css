@@ -205,3 +205,6 @@ input[type="date"] {
   .no-print { display: none !important; }
   body { background: white; }
 }
+
+/* splash already seen this session: hide it before first paint */
+.no-splash #splash { display: none; }

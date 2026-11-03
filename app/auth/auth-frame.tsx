@@ -1,7 +1,8 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Moon, Sun } from "lucide-react"
+import { ArrowLeft, Moon, Sun } from "lucide-react"
+import Link from "next/link"
 import type { ReactNode } from "react"
 import { Logo } from "@/components/logo"
 import { useTheme } from "@/lib/theme/context"
@@ -11,6 +12,9 @@ export function AuthFrame({ title, subtitle, children, wide }: { title: string; 
   const { theme, toggle } = useTheme()
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
+      <Link href="/" aria-label="Geri" className="absolute left-4 top-4 flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground">
+        <ArrowLeft className="size-4" />
+      </Link>
       <div className="absolute right-4 top-4 flex items-center gap-2">
         <button
           onClick={toggle}

@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google"
 import { I18nProvider } from "@/lib/i18n/context"
 import { getLang } from "@/lib/i18n/server"
 import { ThemeProvider } from "@/lib/theme/context"
+import { SplashScreen } from "@/components/splash-screen"
 import { Toaster } from "@/components/ui/toast"
 import "./globals.css"
 
@@ -34,7 +35,7 @@ export const viewport: Viewport = {
 }
 
 // Applied before hydration to avoid a flash of the wrong theme.
-const themeScript = `(function(){try{var t=localStorage.getItem('ys-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);}catch(e){}})();`
+const themeScript = `(function(){try{var t=localStorage.getItem('ys-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);if(sessionStorage.getItem('ysa-splash'))document.documentElement.classList.add('no-splash');}catch(e){}})();`
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const lang = await getLang()
@@ -45,6 +46,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body className="bg-background font-sans antialiased">
         <ThemeProvider>
+          <SplashScreen />
           <I18nProvider initialLang={lang}>
             {children}
             <Toaster />
