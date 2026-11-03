@@ -139,16 +139,18 @@ export function AgendaClient() {
             >
               {weeks.map((week) => {
                 const bars = weekBars(spans, week[0])
+                // Every cell in the week reserves the same number of bar lanes, so the
+                // single-day chips below the bars line up neatly from column to column.
+                const shownBars = bars.filter((x) => x.lane < MAX_ROWS)
+                const weekLanes = shownBars.length ? Math.max(...shownBars.map((x) => x.lane)) + 1 : 0
+                const room = Math.max(0, MAX_ROWS - weekLanes)
                 return (
                   <div key={week[0].toISOString()} className="relative grid min-h-0 grid-cols-7 border-b border-border/50 last:border-b-0">
                     {week.map((d, col) => {
                       const inMonth = d.getMonth() === month.getMonth()
                       const today = isSameDay(d, new Date())
-                      // lanes taken by bars on this day, then single-day chips below them
                       const here = bars.filter((x) => x.from <= col && x.to >= col)
-                      const lanesHere = here.length ? Math.max(...here.map((x) => x.lane)) + 1 : 0
                       const singles = onDay(d).filter((e) => !isSpan(e))
-                      const room = Math.max(0, MAX_ROWS - Math.min(lanesHere, MAX_ROWS))
                       const hidden = here.filter((x) => x.lane >= MAX_ROWS).length + Math.max(0, singles.length - room)
                       return (
                         <button
@@ -159,8 +161,8 @@ export function AgendaClient() {
                           <span className={cn("mx-auto flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold md:mx-0", today ? "bg-primary text-primary-foreground" : inMonth ? "text-foreground" : "text-muted-foreground/50")}>
                             {d.getDate()}
                           </span>
-                          {/* reserve the lanes drawn by the bar overlay */}
-                          {Array.from({ length: Math.min(lanesHere, MAX_ROWS) }, (_, i) => <span key={i} className="h-3.5 shrink-0 md:h-4" />)}
+                          {/* reserve the lanes the bar overlay draws, same height for every day of the week */}
+                          {Array.from({ length: weekLanes }, (_, i) => <span key={i} className="h-3.5 shrink-0 md:h-4" />)}
                           {singles.slice(0, room).map((e) => {
                             const color = station(e.station_id)?.color ?? "188 57% 48%"
                             return (

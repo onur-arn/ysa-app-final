@@ -282,6 +282,21 @@ create policy "posts insert" on posts for insert to authenticated
 create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl());
 create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
+-- Feed posts are kept 30 days, then deleted for good (pinned ones stay).
+-- Called opportunistically by the app on every feed load, and nightly if pg_cron exists.
+create or replace function public.purge_old_posts() returns void
+language sql security definer set search_path = public as $$
+  delete from posts where not pinned and kind <> 'welcome' and created_at < now() - interval '30 days';
+$$;
+do $$
+begin
+  perform 1 from pg_extension where extname = 'pg_cron';
+  if found then
+    perform cron.schedule('purge-old-posts', '0 3 * * *', 'select public.purge_old_posts()');
+  end if;
+exception when others then null;
+end $$;
+
 -- Only Uluslararası Büro may (un)pin, whoever edits the post.
 create or replace function public.posts_guard_pin() returns trigger
 language plpgsql security definer set search_path = public as $$

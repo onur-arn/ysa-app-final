@@ -29,6 +29,7 @@ export async function fetchFeed() {
     .order("pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(80)
+  void sb().rpc("purge_old_posts").then(() => {}) // delete posts past the 30-day window
   return must(res) as unknown as Post[]
 }
 
