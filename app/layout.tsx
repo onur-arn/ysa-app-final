@@ -39,6 +39,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={lang} suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable}`}>
       <head>
+        <meta name="color-scheme" content="only light" />
+        {/* tells the Dark Reader extension not to invert the app */}
+        <meta name="darkreader-lock" />
         <Script id="theme" strategy="beforeInteractive">{themeScript}</Script>
       </head>
       <body className="bg-background font-sans antialiased">

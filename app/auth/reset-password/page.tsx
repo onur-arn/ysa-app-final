@@ -30,14 +30,18 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <AuthFrame title={t("auth.newPassword")}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <AuthFrame
+      title={t("auth.newPassword")}
+      footer={
+        <>
+          {error && <p className="text-center text-sm text-destructive">{error}</p>}
+          <Button type="submit" form="reset-form" size="lg" loading={loading} className="w-full">{t("common.save")}</Button>
+        </>
+      }
+    >
+      <form id="reset-form" onSubmit={onSubmit} className="flex flex-col gap-4">
         <IconInput icon={Lock} type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.newPassword")} />
         <IconInput icon={Lock} type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t("auth.confirmPassword")} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" size="lg" loading={loading}>
-          {t("common.save")}
-        </Button>
       </form>
     </AuthFrame>
   )

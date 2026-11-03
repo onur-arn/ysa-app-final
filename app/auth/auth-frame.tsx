@@ -5,34 +5,49 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 /**
- * Shared grid of every auth screen: same 24 px gutter, Home button aligned with
- * the content column, content anchored at the same height on every page.
+ * Shared layout of every first screen, built for phones:
+ *   top    → Home button (aligned with the content column)
+ *   middle → title and content, centred
+ *   bottom → the main action, always at the same place (thumb reach), with the safe area
  */
-export function AuthShell({ children }: { children: ReactNode }) {
+export function AuthShell({ children, footer, ownFooter }: { children: ReactNode; footer?: ReactNode; ownFooter?: boolean }) {
   return (
-    <main className="min-h-dvh bg-background px-6 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <div className="mx-auto w-full max-w-sm">
+    <main className="flex min-h-dvh flex-col bg-background px-6 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
         <HomeButton />
-        <div className="mt-8">{children}</div>
+        <div className="flex flex-1 flex-col">{children}</div>
+        {footer ? <AuthFooter>{footer}</AuthFooter> : !ownFooter && <div className="h-10" />}
       </div>
     </main>
   )
 }
 
-export function AuthTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+/** Bottom action bar: stays visible at the bottom of the screen, even on long forms. */
+export function AuthFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-6">
-      <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-      {subtitle && <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>}
+    <div className="sticky bottom-0 -mx-6 mt-auto bg-gradient-to-t from-background from-70% to-transparent px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-6">
+      <div className="flex flex-col gap-3">{children}</div>
     </div>
   )
 }
 
-export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode; wide?: boolean }) {
+export function AuthTitle({ title, subtitle }: { title: ReactNode; subtitle?: string }) {
   return (
-    <AuthShell>
-      <AuthTitle title={title} subtitle={subtitle} />
-      {children}
+    <div className="mb-10 flex flex-col items-center gap-2 text-center">
+      <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+      {subtitle && <p className="max-w-[18rem] text-sm text-muted-foreground text-pretty">{subtitle}</p>}
+    </div>
+  )
+}
+
+/** Title + content centred vertically, main action at the bottom. */
+export function AuthFrame({ title, subtitle, children, footer }: { title: ReactNode; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
+  return (
+    <AuthShell footer={footer}>
+      <div className="flex flex-1 flex-col justify-center py-10">
+        <AuthTitle title={title} subtitle={subtitle} />
+        {children}
+      </div>
     </AuthShell>
   )
 }

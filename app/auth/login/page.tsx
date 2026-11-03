@@ -35,8 +35,19 @@ function LoginForm() {
   }
 
   return (
-    <AuthFrame title="YouthStation" subtitle={t("auth.tagline")}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <AuthFrame
+      title={<>Youth<span className="text-primary">Station</span></>}
+      subtitle={t("auth.tagline")}
+      footer={
+        <>
+          {error && <p className="text-center text-sm text-destructive">{error}</p>}
+          <Button type="submit" form="login-form" size="lg" loading={loading} className="w-full">
+            {t("auth.login")}
+          </Button>
+        </>
+      }
+    >
+      <form id="login-form" onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">{t("auth.email")}</span>
           <IconInput icon={Mail} type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="uye@youthstation.org" />
@@ -63,10 +74,6 @@ function LoginForm() {
             {t("auth.forgot")}
           </Link>
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" size="lg" loading={loading} className="mt-2">
-          {t("auth.login")}
-        </Button>
       </form>
     </AuthFrame>
   )

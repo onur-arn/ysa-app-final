@@ -31,19 +31,26 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <AuthFrame title={t("auth.forgotTitle")} subtitle={sent ? undefined : t("auth.forgotText")}>
+    <AuthFrame
+      title={t("auth.forgotTitle")}
+      subtitle={sent ? undefined : t("auth.forgotText")}
+      footer={
+        sent ? undefined : (
+          <>
+            {error && <p className="text-center text-sm text-destructive">{error}</p>}
+            <Button type="submit" form="forgot-form" size="lg" loading={loading} className="w-full">{t("auth.sendLink")}</Button>
+          </>
+        )
+      }
+    >
       {sent ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 text-center">
           <MailCheck className="size-10 text-primary" />
           <p className="text-sm text-foreground">{t("auth.forgotSent")}</p>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form id="forgot-form" onSubmit={onSubmit} className="flex flex-col gap-4">
           <IconInput icon={Mail} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.email")} />
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" size="lg" loading={loading}>
-            {t("auth.sendLink")}
-          </Button>
         </form>
       )}
     </AuthFrame>

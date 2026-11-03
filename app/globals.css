@@ -3,7 +3,8 @@
 
 
 html, body {
-  overflow-x: hidden;
+  /* clip (not hidden): blocks sideways scrolling without breaking position: sticky */
+  overflow-x: clip;
   max-width: 100vw;
 }
 
@@ -57,7 +58,9 @@ input[type="date"] {
 }
 
 :root {
-  color-scheme: light;
+  /* "only light" forbids browsers (Chrome auto-dark, forced dark modes) from darkening the app;
+     colours only change through the palettes in Ayarlar */
+  color-scheme: only light;
   /* Palette knobs — overridden per palette below (Ayarlar → Renk teması) */
   --h: 215;          /* hue of the whole interface */
   --tint: 0;         /* how much the page background is tinted */
