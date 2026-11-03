@@ -37,7 +37,7 @@ export function ReportSheet({ target, onClose }: { target: ReportTarget | null; 
       footer={<Button className="w-full" size="lg" onClick={submit} loading={loading}><Flag className="size-4" /> {t("report.send")}</Button>}
     >
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">{t("report.intro")}{target ? ` · ${target.label}` : ""}</p>
+        <p className="text-sm text-muted-foreground">{t("report.intro")}</p>
         <Field label={t("report.reason")}>
           <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("report.reasonPlaceholder")} className="min-h-28" />
         </Field>

@@ -116,7 +116,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "feed.err.empty": ["Metin boş olamaz","Le texte est vide","Text is empty"],
   "feed.igem": ["iGEM Talebi","Demande iGEM","iGEM request"],
   "report.title": ["Şikayet et","Signaler","Report"],
-  "report.intro": ["Bu içeriği moderatöre bildir.","Signaler ce contenu au modérateur.","Report this content to the moderator."],
+  "report.intro": ["Bu içeriği yöneticiye bildir.","Signaler ce contenu à l'administration.","Report this content to the admins."],
   "report.reason": ["Sebep (isteğe bağlı)","Motif (facultatif)","Reason (optional)"],
   "report.reasonPlaceholder": ["Ne oldu?","Que se passe-t-il ?","What happened?"],
   "report.send": ["Gönder","Envoyer","Send"],
