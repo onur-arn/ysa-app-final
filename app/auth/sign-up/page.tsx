@@ -164,6 +164,7 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+          <p className="text-[11px] font-medium text-muted-foreground">Fotoğraf zorunludur</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Ad" icon={User}><input required value={f.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Zeliha" autoComplete="given-name" className={field} /></Field>
