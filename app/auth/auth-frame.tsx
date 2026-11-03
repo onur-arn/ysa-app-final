@@ -1,42 +1,22 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { ArrowLeft, Moon, Sun } from "lucide-react"
-import Link from "next/link"
+import { HomeButton } from "@/components/home-button"
 import type { ReactNode } from "react"
 import { Logo } from "@/components/logo"
-import { useTheme } from "@/lib/theme/context"
 import { cn } from "@/lib/utils"
 
 export function AuthFrame({ title, subtitle, children, wide }: { title: string; subtitle?: string; children: ReactNode; wide?: boolean }) {
-  const { theme, toggle } = useTheme()
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
-      <Link href="/" aria-label="Geri" className="absolute left-4 top-4 flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground">
-        <ArrowLeft className="size-4" />
-      </Link>
-      <div className="absolute right-4 top-4 flex items-center gap-2">
-        <button
-          onClick={toggle}
-          aria-label="Theme"
-          className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
-        >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </button>
-      </div>
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className={cn("w-full", wide ? "max-w-md" : "max-w-sm")}
-      >
+      <HomeButton />
+      <div className={cn("w-full", wide ? "max-w-md" : "max-w-sm")}>
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo className="size-16" size={64} />
           <h1 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>}
         </div>
         {children}
-      </motion.div>
+      </div>
     </main>
   )
 }

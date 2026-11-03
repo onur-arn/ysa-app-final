@@ -1,15 +1,15 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
-import { Cake, Camera, Check, CheckCircle2, ChevronLeft, ExternalLink, Eye, EyeOff, Loader2, Lock, Mail, MapPin, Moon, Phone, Sun, User } from "lucide-react"
+import { Cake, Camera, Check, CheckCircle2, ChevronLeft, ExternalLink, Eye, EyeOff, Loader2, Lock, Mail, MapPin, Phone, User } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { HomeButton } from "@/components/home-button"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { BOARD_POSITIONS, EXECUTIVE_POSITIONS, HOMETOWNS } from "@/lib/constants"
 import { createClient } from "@/lib/supabase/client"
-import { useTheme } from "@/lib/theme/context"
 import type { Station } from "@/lib/types"
 import { compressImage } from "@/lib/upload"
 import { cn } from "@/lib/utils"
@@ -48,7 +48,6 @@ function Field({ label, icon: Icon, children }: { label: ReactNode; icon?: React
 }
 
 export default function SignUpPage() {
-  const { theme, toggle } = useTheme()
   const [step, setStep] = useState(1)
   const [dir, setDir] = useState(1)
   const [f, setF] = useState<Form>(EMPTY)
@@ -99,12 +98,8 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
-      <div className="absolute right-4 top-4">
-        <button onClick={toggle} aria-label="Tema" className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground">
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </button>
-      </div>
+    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16">
+      <HomeButton />
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center">
           <Link href="/" aria-label="YouthStation"><Logo size={48} /></Link>
@@ -172,9 +167,6 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
         <Field label="LinkedIn (isteğe bağlı)" icon={ExternalLink}><input type="url" value={f.linkedin} onChange={(e) => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/…" className={field} /></Field>
         <Button type="submit" size="lg" className="mt-2" disabled={!canNext}>Devam et</Button>
       </form>
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Zaten üye misin? <Link href="/auth/login" className="font-semibold text-primary">Giriş yap</Link>
-      </p>
     </div>
   )
 }
@@ -278,7 +270,7 @@ function Success({ email }: { email: string }) {
       <h1 className="font-heading text-2xl font-bold text-foreground">Talebiniz alındı!</h1>
       <p className="mt-3 text-sm text-muted-foreground text-pretty">Kaydınız başarıyla iletildi. Yönetici onayladıktan sonra hesabınız aktif hale gelecektir.</p>
       <p className="mt-2 text-sm text-muted-foreground text-pretty"><b className="text-foreground">{email}</b> adresine gönderilen onay e-postasını kontrol edin.</p>
-      <Link href="/auth/login" className="mt-8 flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">Giriş sayfasına dön</Link>
+      <Link href="/" className="mt-8 flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">Ana sayfaya dön</Link>
     </div>
   )
 }

@@ -39,7 +39,7 @@ function LoginForm() {
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">{t("auth.email")}</span>
-          <IconInput icon={Mail} type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="membre@youthstation.org" />
+          <IconInput icon={Mail} type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="uye@youthstation.org" />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">{t("auth.password")}</span>
@@ -68,12 +68,6 @@ function LoginForm() {
           {t("auth.login")}
         </Button>
       </form>
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        {t("auth.noAccount")}{" "}
-        <Link href="/auth/sign-up" className="font-semibold text-primary">
-          {t("auth.signup")}
-        </Link>
-      </p>
     </AuthFrame>
   )
 }

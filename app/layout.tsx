@@ -28,14 +28,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5fafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f2330" },
-  ],
+  themeColor: "#ffffff",
 }
 
-// Applied before hydration to avoid a flash of the wrong theme.
-const themeScript = `(function(){try{var t=localStorage.getItem('ys-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);if(sessionStorage.getItem('ysa-splash')||location.search.indexOf('nosplash')>-1)document.documentElement.classList.add('no-splash');}catch(e){}})();`
+// Applies the saved colour palette before the first paint.
+const themeScript = `(function(){var d=document.documentElement;d.dataset.palette='youthstation';try{var p=localStorage.getItem('ys-palette');if(p)d.dataset.palette=p;if(sessionStorage.getItem('ysa-splash')||location.search.indexOf('nosplash')>-1)d.classList.add('no-splash');}catch(e){}})();`
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const lang = await getLang()

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueryClient } from "@tanstack/react-query"
-import { Bell, BellRing, Camera, GraduationCap, KeyRound, Lock, LogOut, Moon, Sun, Trash2, UserRound } from "lucide-react"
+import { Bell, BellRing, Camera, Check, GraduationCap, KeyRound, Lock, LogOut, Palette, Trash2, UserRound } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -19,7 +19,7 @@ import { useI18n } from "@/lib/i18n/context"
 import { isAdmin } from "@/lib/permissions"
 import { disablePush, enablePush, pushEnabled, pushSupported } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
-import { useTheme } from "@/lib/theme/context"
+import { PALETTES, usePalette } from "@/lib/theme/context"
 import type { NotifPrefs } from "@/lib/types"
 import { compressImage, uploadMedia } from "@/lib/upload"
 import { cn } from "@/lib/utils"
@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils"
 export function SettingsClient() {
   const { me } = useApp()
   const { t } = useI18n()
-  const { theme, setTheme } = useTheme()
+  const { palette, setPalette } = usePalette()
   const router = useRouter()
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -173,15 +173,23 @@ export function SettingsClient() {
         <Button variant="secondary" size="sm" onClick={() => setIgem(true)}>{t("settings.igemRequestBtn")}</Button>
       </Card>
 
-      <SectionTitle><span className="flex items-center gap-1.5"><Sun className="size-3.5" /> {t("settings.appearance")}</span></SectionTitle>
-      <Card className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-2">
-          {(["light", "dark"] as const).map((m) => (
-            <button key={m} onClick={() => setTheme(m)} aria-label={t(m === "light" ? "settings.lightMode" : "settings.darkMode")} className={cn("flex items-center justify-center gap-2 rounded-2xl border py-2.5 text-sm font-semibold", theme === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-              {m === "light" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+      <SectionTitle><span className="flex items-center gap-1.5"><Palette className="size-3.5" /> {t("settings.palette")}</span></SectionTitle>
+      <Card className="grid grid-cols-5 gap-2 p-3">
+        {PALETTES.map((p) => {
+          const active = palette === p.id
+          return (
+            <button key={p.id} onClick={() => setPalette(p.id)} className="flex flex-col items-center gap-1.5" aria-pressed={active}>
+              <span
+                className={cn("relative flex size-12 items-center justify-center rounded-2xl border-2 transition-transform", active ? "scale-105 border-foreground/80" : "border-border")}
+                style={{ backgroundColor: p.bg }}
+              >
+                <span className="size-6 rounded-full shadow-sm" style={{ backgroundColor: p.swatch }} />
+                {active && <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-foreground text-background"><Check className="size-3" strokeWidth={3} /></span>}
+              </span>
+              <span className={cn("text-[10.5px] font-semibold", active ? "text-foreground" : "text-muted-foreground")}>{p.name}</span>
             </button>
-          ))}
-        </div>
+          )
+        })}
       </Card>
 
       <SectionTitle><span className="flex items-center gap-1.5"><KeyRound className="size-3.5" /> {t("settings.account")}</span></SectionTitle>
