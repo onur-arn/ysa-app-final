@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
   if (!/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "invalid_email" }, { status: 400 })
   if (password.length < 8) return NextResponse.json({ error: "weak_password" }, { status: 400 })
   const guest = b.guest === true
+  // contact details are mandatory (LinkedIn is the only optional field)
+  if (str(b.phone).replace(/\D/g, "").length < 8 || !/^\d{4}-\d{2}-\d{2}$/.test(str(b.birthday, 10))) return NextResponse.json({ error: "missing_fields" }, { status: 400 })
   // a station member must pick a station and a görev; a guest ("Misafir giriş") has neither
   if (!str(b.first_name) || !str(b.last_name) || (!guest && (!str(b.station_id) || !str(b.position)))) return NextResponse.json({ error: "missing_fields" }, { status: 400 })
   if (!photo.includes("/storage/v1/object/public/media/signup/")) return NextResponse.json({ error: "photo_required" }, { status: 400 })

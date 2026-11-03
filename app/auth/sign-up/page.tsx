@@ -65,6 +65,7 @@ export default function SignUpPage() {
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((s) => ({ ...s, [k]: v }))
   const go = (delta: number) => {
+    window.scrollTo({ top: 0 })
     setError(null)
     setDir(delta)
     setStep((s) => s + delta)
@@ -128,7 +129,9 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
   const [show, setShow] = useState(false)
   const preview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
   const emailOk = /^\S+@\S+\.\S+$/.test(f.email)
-  const canNext = !!photo && f.first_name.trim() && f.last_name.trim() && emailOk && f.password.length >= 8
+  // every field is required except LinkedIn — "Devam et" simply stays grey until then
+  const canNext = !!photo && !!f.first_name.trim() && !!f.last_name.trim() && emailOk && f.password.length >= 8
+    && f.phone.replace(/\D/g, "").length >= 8 && !!f.birthday
 
   return (
     <div className="flex flex-1 flex-col">
@@ -150,7 +153,6 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
-          {!photo && <p className="text-[11px] text-destructive">Profil fotoğrafı zorunludur *</p>}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Ad" icon={User}><input required value={f.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Zeliha" autoComplete="given-name" className={field} /></Field>
@@ -203,7 +205,7 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
         <>
           <div className="mb-6 flex items-center gap-3 text-xs font-medium text-muted-foreground"><span className="h-px flex-1 bg-border" /> veya istasyonunu seç <span className="h-px flex-1 bg-border" /></div>
       <div className="mb-5 flex flex-col gap-2">
-        <span className="flex items-center gap-1.5 text-sm font-medium text-foreground"><MapPin className="size-4 text-muted-foreground" /> İstasyonun <span className="text-destructive">*</span></span>
+        <span className="flex items-center gap-1.5 text-sm font-medium text-foreground"><MapPin className="size-4 text-muted-foreground" /> İstasyonun</span>
         <div className="overflow-hidden rounded-2xl border border-border bg-card p-2">
           <EuropeMap stations={stations} selected={f.station_id} onSelect={pickStation} />
         </div>
@@ -221,7 +223,7 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
         </div>
       </div>
       <label className="mb-6 flex flex-col gap-2">
-        <span className="text-sm font-medium text-foreground">Görevin <span className="text-destructive">*</span></span>
+        <span className="text-sm font-medium text-foreground">Görevin</span>
         <select value={f.position} onChange={(e) => set("position", e.target.value)} disabled={!f.station_id} className={cn("h-12 w-full appearance-none rounded-xl border border-input bg-card px-3 text-base outline-none focus:border-ring disabled:opacity-60", f.position ? "text-foreground" : "text-muted-foreground")}>
           <option value="" disabled>{f.station_id ? "Görevini seç" : "Önce istasyonunu seç"}</option>
           <optgroup label="Yönetim Kurulu">{BOARD_POSITIONS.map(option)}</optgroup>
@@ -245,7 +247,7 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
         <p className="mt-1 text-sm text-muted-foreground">Adım 3 / 3</p>
       </div>
       <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
-        <p className="text-sm font-semibold text-foreground">iGEM eğitimini gerçekleştirdiniz mi? <span className="text-destructive">*</span></p>
+        <p className="text-sm font-semibold text-foreground">iGEM eğitimini gerçekleştirdiniz mi?</p>
         <div className="flex gap-3">
           {(["evet", "hayır"] as const).map((opt) => (
             <button
@@ -261,12 +263,12 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
         </div>
         {f.igem === "evet" && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Ne zaman? <span className="text-destructive">*</span></span>
+            <span className="text-xs font-medium text-muted-foreground">Ne zaman?</span>
             <input type="date" value={f.igem_date} onChange={(e) => set("igem_date", e.target.value)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring" />
           </label>
         )}
       </div>
-      <p className="mb-2 text-sm font-semibold text-foreground">Memleket <span className="text-destructive">*</span></p>
+      <p className="mb-2 text-sm font-semibold text-foreground">Memleket</p>
       <div className="mb-3 overflow-hidden rounded-2xl border border-border bg-card p-2">
         <TurkeyMap selected={f.hometown} onSelect={(h) => set("hometown", h)} />
       </div>
