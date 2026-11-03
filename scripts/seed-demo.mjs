@@ -8,8 +8,12 @@ if (!url || !key) {
   console.error("NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis (.env.local).")
   process.exit(1)
 }
+const PASSWORD = process.env.SEED_DEMO_PASSWORD
+if (!PASSWORD) {
+  console.error("SEED_DEMO_PASSWORD est requis (.env.local).")
+  process.exit(1)
+}
 const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-const PASSWORD = "YsaDemo2026!"
 const USERS = [
   { key: "admin", email: "admin@example.com", first_name: "Ayşe", last_name: "Yılmaz", station_id: "intl", position: "Başkan", app_role: "admin", status: "active", phone: "+33 6 11 22 33 44", hometown: "Ankara" },
   { key: "intl", email: "intl@example.com", first_name: "Deniz", last_name: "Kara", station_id: "intl", position: "Sekreter", app_role: "member", status: "active", phone: "+49 151 2345 6789", hometown: "İzmir" },
@@ -94,7 +98,6 @@ try {
     console.log(`• ${u.email.padEnd(22)} ${u.station_id.padEnd(6)} ${u.app_role}/${u.status}`)
   }
   await seed(id)
-  console.log(`\nMot de passe commun : ${PASSWORD}`)
   console.log("⚠️  admin@example.com a été ajouté aux comptes VIP (démo) — à retirer de vip_emails avant la mise en ligne.")
 } catch (e) {
   console.error("Échec :", e.message)

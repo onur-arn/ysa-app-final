@@ -48,7 +48,9 @@ const check = (name, cond) => { console.log((cond ? "PASS " : "FAIL ") + name); 
 
 // ── accounts ────────────────────────────────────────────────────────────────
 let r = await q(`select id, app_role, status from profiles order by id`)
-check("VIP e-mail becomes active admin", r[0].app_role === "admin" && r[0].status === "active")
+check("VIP e-mail waits for approval, with the role ready", r[0].app_role === "admin" && r[0].status === "pending")
+check("unapproved VIP has no admin power", (await as(ADMIN, `select public.is_admin() as a`)).rows[0].a === false)
+await db.exec(`select set_config('ysa.trusted', 'on', false); update profiles set status = 'active' where id = '${ADMIN}'; select set_config('ysa.trusted', 'off', false);`)
 check("other sign-ups wait for approval", r.slice(1).every((p) => p.status === "pending" && p.app_role === "member"))
 check("pending member sees only himself", (await as(B, `select id from profiles`)).rows.length === 1)
 await as(B, `update profiles set status = 'active', app_role = 'admin', points = 999 where id = '${B}'`)

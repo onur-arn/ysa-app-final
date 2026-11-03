@@ -124,8 +124,9 @@ begin
     case when guest then 'Misafir' else nullif(meta->>'position', '') end,
     coalesce((meta->>'igem_trained')::boolean, false), nullif(meta->>'igem_date', '')::date,
     case when boss then 'admin' else 'member' end,
-    case when boss then 'active' else 'pending' end,
-    case when boss then now() end,
+    -- the address is not proven at sign-up: a VIP waits for approval like everyone else
+    'pending',
+    null,
     photo
   )
   on conflict (id) do nothing;

@@ -42,7 +42,7 @@ L'application YouthStation, troisième version : le produit de **ysa-application
 | Changer le poste d'un membre | | ✓ | ✓ |
 | Valider les inscriptions, gérer les comptes | | | ✓ |
 
-Les comptes `secretaire@`, `president@youthstation.org` et `feyza.simsek09@gmail.com` deviennent administrateurs à leur inscription, comme dans la v1. Le premier compte créé l'est aussi.
+Les adresses de la table `vip_emails` obtiennent le rôle administrateur, une fois leur inscription validée comme toutes les autres.
 
 ## Installation
 
@@ -55,7 +55,7 @@ npm run dev
 1. Créer un projet Supabase, puis exécuter **`supabase/schema.sql`** dans *SQL Editor* (le script peut être relancé sans risque).
 2. *Authentication → URL Configuration* : ajouter `http://localhost:3000/auth/callback` aux *Redirect URLs*.
 3. Optionnel : notifications push. `npx web-push generate-vapid-keys`, puis renseigner `VAPID_*` dans `.env.local`.
-4. Optionnel : `npm run seed:demo` crée 5 comptes de démo (mot de passe `YsaDemo2026!`) et des données d'exemple.
+4. Optionnel : `npm run seed:demo` crée 5 comptes de démo (mot de passe `SEED_DEMO_PASSWORD` de `.env.local`) et des données d'exemple. Jamais sur la base de production.
 
 | Commande | Rôle |
 |---|---|

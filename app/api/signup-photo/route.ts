@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { limited } from "@/lib/server/rate-limit"
 import { createAdminClient } from "@/lib/supabase/server"
 
 const MAX = 3 * 1024 * 1024
@@ -9,6 +10,7 @@ const TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
  * Only small images are accepted; the database only keeps URLs from this folder.
  */
 export async function POST(req: NextRequest) {
+  const rl = limited(req, "signup-photo", 20, 60 * 60 * 1000); if (rl) return rl
   const form = await req.formData().catch(() => null)
   const file = form?.get("file")
   if (!(file instanceof File) || !TYPES.has(file.type) || file.size > MAX) {

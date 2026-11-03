@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!photo.includes("/storage/v1/object/public/media/signup/")) return NextResponse.json({ error: "photo_required" }, { status: 400 })
 
   const admin = createAdminClient()
-  const { data: created, error } = await admin.auth.admin.createUser({
+  const { error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -45,11 +45,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "failed" }, { status: 500 })
   }
 
-  // VIP addresses are activated directly (no approval e-mail needed)
-  const { data: profile } = await admin.from("profiles").select("status").eq("id", created.user!.id).maybeSingle()
-  if (profile?.status === "active") return NextResponse.json({ ok: true, active: true })
   await notifyAdminsOfSignup(email).catch((e) => console.error("[signup] admin e-mail failed:", e))
-  return NextResponse.json({ ok: true, active: false })
+  return NextResponse.json({ ok: true })
 }
 
 /** Step 1 check: tells the form right away that an address is already registered. */

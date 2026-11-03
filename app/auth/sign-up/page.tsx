@@ -55,7 +55,6 @@ export default function SignUpPage() {
   const [taken, setTaken] = useState<{ station_id: string; position: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [active, setActive] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -99,7 +98,6 @@ export default function SignUpPage() {
           : "Bir hata oluştu. Lütfen tekrar deneyin.",
       )
     }
-    setActive(!!((await res.json().catch(() => ({}))) as { active?: boolean }).active)
     go(1)
   }
 
@@ -115,7 +113,7 @@ export default function SignUpPage() {
             {step === 1 && <Step1 f={f} set={set} photo={photo} setPhoto={setPhoto} onNext={() => go(1)} />}
             {step === 2 && <Step2 f={f} set={set} stations={stations} taken={taken} onNext={() => go(1)} onBack={() => go(-1)} />}
             {step === 3 && <Step3 f={f} set={set} onBack={() => go(-1)} onSubmit={submit} loading={loading} error={error} />}
-            {step === 4 && <Success email={f.email} active={active} />}
+            {step === 4 && <Success email={f.email} />}
           </motion.div>
         </AnimatePresence>
     </AuthShell>
@@ -303,19 +301,7 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
   )
 }
 
-function Success({ email, active }: { email: string; active: boolean }) {
-  if (active) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="mb-5 flex size-20 items-center justify-center rounded-full bg-emerald-500/15"><CheckCircle2 className="size-10 text-emerald-500" /></div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Hesabın aktif!</h1>
-          <p className="mt-3 text-sm text-muted-foreground text-pretty">Yönetici hesabı olarak doğrudan giriş yapabilirsin.</p>
-        </div>
-        <AuthFooter><Link href="/auth/login" className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">Giriş yap</Link></AuthFooter>
-      </div>
-    )
-  }
+function Success({ email }: { email: string }) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
