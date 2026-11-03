@@ -12,6 +12,9 @@
     "dev:https": "next dev --experimental-https"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tanstack/query-sync-storage-persister": "^5.90.0",

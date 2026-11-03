@@ -11,3 +11,7 @@ supabase/.temp
 
 # certificates from `npm run dev:https`
 certificates/
+
+# Capacitor native project (generated in CI)
+/ios
+/android

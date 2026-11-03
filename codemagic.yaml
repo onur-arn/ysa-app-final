@@ -1,0 +1,42 @@
+# Build the YouthStation iOS app in the cloud (no local Xcode needed) and send it
+# to TestFlight / the App Store. Connect this repo in app.codemagic.io, then add
+# your Apple signing (App Store Connect API key) under the workflow's settings.
+# The bundle identifier below must match an App ID in your Apple Developer account.
+workflows:
+  ios:
+    name: YouthStation iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: YouthStation ASC   # <-- name of the API key you add in Codemagic
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.youthstation.ysa
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Generate the iOS project
+        script: |
+          [ -d ios ] || npx cap add ios
+          npx cap sync ios
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Build the IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # submit_to_app_store: false   # flip to true when you're ready for public release
