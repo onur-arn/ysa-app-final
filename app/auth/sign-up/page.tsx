@@ -5,7 +5,7 @@ import { Cake, Camera, Check, CheckCircle2, ChevronLeft, ExternalLink, Eye, EyeO
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { HomeButton } from "@/components/home-button"
+import { AuthShell } from "../auth-frame"
 import { Button } from "@/components/ui/button"
 import { BOARD_POSITIONS, EXECUTIVE_POSITIONS, HOMETOWNS } from "@/lib/constants"
 import { createClient } from "@/lib/supabase/client"
@@ -97,15 +97,13 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16">
-      <HomeButton />
-      <div className="w-full max-w-sm">
+    <AuthShell>
         {step < 4 && (
           <div className="mb-6 flex items-center gap-1.5">
             {[1, 2, 3].map((i) => <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", step >= i ? "bg-primary" : "bg-border")} />)}
           </div>
         )}
-        <AnimatePresence mode="wait" custom={dir}>
+        <AnimatePresence mode="wait" custom={dir} initial={false}>
           <motion.div key={step} custom={dir} variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: "easeInOut" }}>
             {step === 1 && <Step1 f={f} set={set} photo={photo} setPhoto={setPhoto} onNext={() => go(1)} />}
             {step === 2 && <Step2 f={f} set={set} stations={stations} taken={taken} onNext={() => go(1)} onBack={() => go(-1)} />}
@@ -113,8 +111,7 @@ export default function SignUpPage() {
             {step === 4 && <Success email={f.email} />}
           </motion.div>
         </AnimatePresence>
-      </div>
-    </main>
+    </AuthShell>
   )
 }
 

@@ -4,18 +4,36 @@ import { HomeButton } from "@/components/home-button"
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
-export function AuthFrame({ title, subtitle, children, wide }: { title: string; subtitle?: string; children: ReactNode; wide?: boolean }) {
+/**
+ * Shared grid of every auth screen: same 24 px gutter, Home button aligned with
+ * the content column, content anchored at the same height on every page.
+ */
+export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
-      <HomeButton />
-      <div className={cn("w-full", wide ? "max-w-md" : "max-w-sm")}>
-        <div className="mb-8 flex flex-col items-center text-center">
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>}
-        </div>
-        {children}
+    <main className="min-h-dvh bg-background px-6 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <div className="mx-auto w-full max-w-sm">
+        <HomeButton />
+        <div className="mt-8">{children}</div>
       </div>
     </main>
+  )
+}
+
+export function AuthTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="mb-6">
+      <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+      {subtitle && <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>}
+    </div>
+  )
+}
+
+export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode; wide?: boolean }) {
+  return (
+    <AuthShell>
+      <AuthTitle title={title} subtitle={subtitle} />
+      {children}
+    </AuthShell>
   )
 }
 

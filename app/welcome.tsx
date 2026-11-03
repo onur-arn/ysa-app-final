@@ -12,7 +12,7 @@ const BRAND = "#67A2B2"
 export function Welcome() {
   return (
     <main
-      className="flex min-h-dvh flex-col items-center bg-white px-8 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
+      className="flex min-h-dvh flex-col items-center bg-white px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
       style={{ colorScheme: "light" }}
     >
       {/* logo in the upper third, the slogan right below it */}
@@ -29,14 +29,14 @@ export function Welcome() {
       <div className="flex w-full max-w-sm flex-col gap-3">
         <Link
           href="/auth/login"
-          className="flex h-[52px] items-center justify-center rounded-2xl text-base font-semibold text-white transition-transform active:scale-[0.98]"
+          className="flex h-12 items-center justify-center rounded-2xl text-base font-semibold text-white transition-transform active:scale-[0.98]"
           style={{ backgroundColor: BRAND, boxShadow: `0 10px 24px -10px ${BRAND}` }}
         >
           Giriş yap
         </Link>
         <Link
           href="/auth/sign-up"
-          className="flex h-[52px] items-center justify-center rounded-2xl border-2 text-base font-semibold transition-transform active:scale-[0.98]"
+          className="flex h-12 items-center justify-center rounded-2xl border-2 text-base font-semibold transition-transform active:scale-[0.98]"
           style={{ borderColor: `${BRAND}55`, color: BRAND }}
         >
           Kayıt ol

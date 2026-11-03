@@ -4,6 +4,8 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "localhost"
 
 const nextConfig = {
+  // Lets a verification build run next to `next dev` without touching its .next folder.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" },
