@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Phone } from "lucide-react"
 import { useState } from "react"
 import { useI18n } from "@/lib/i18n/context"
-import { telUrl, whatsappUrl } from "@/lib/phone"
+import { whatsappUrl } from "@/lib/phone"
 import { cn } from "@/lib/utils"
 
 export function WhatsAppIcon({ className }: { className?: string }) {
@@ -16,54 +16,46 @@ export function WhatsAppIcon({ className }: { className?: string }) {
 }
 
 /**
- * The 📞 button (top-right of a chat, profile sheet): opens a small menu with
- * a WhatsApp link (chat/call in WhatsApp) and a regular phone call.
+ * Call symbol (chat header / profile). Tapping it opens a small popup showing
+ * WhatsApp + the person's number; tapping that opens WhatsApp directly. No regular
+ * call. The popup sits above everything (the header needs its own z-index to show
+ * over the message list — see chat-thread header).
  */
 export function PhoneButton({ phone, className }: { phone: string | null | undefined; className?: string }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const wa = whatsappUrl(phone)
-  const tel = telUrl(phone)
-  if (!wa && !tel) {
+
+  if (!wa) {
     return (
       <span className={cn("flex size-10 items-center justify-center rounded-full text-muted-foreground/40", className)} title={t("phone.none")}>
         <Phone className="size-5" />
       </span>
     )
   }
+
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button onClick={() => setOpen((v) => !v)} className={cn("flex size-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10", className)} aria-label={t("phone.call")}>
         <Phone className="size-5" />
       </button>
       <AnimatePresence>
         {open && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: -6 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: -6 }}
-              className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-2xl"
+              className="absolute right-0 top-12 z-[70] w-60 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-2xl"
             >
-              {wa && (
-                <a href={wa} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary">
-                  <span className="flex size-9 items-center justify-center rounded-full bg-[#25D366] text-white"><WhatsAppIcon className="size-5" /></span>
-                  <span>
-                    <span className="block text-sm font-semibold text-foreground">WhatsApp</span>
-                    <span className="block text-[11px] text-muted-foreground">{t("phone.whatsappHint")}</span>
-                  </span>
-                </a>
-              )}
-              {tel && (
-                <a href={tel} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary">
-                  <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground"><Phone className="size-4" /></span>
-                  <span>
-                    <span className="block text-sm font-semibold text-foreground">{t("phone.call")}</span>
-                    <span className="block text-[11px] text-muted-foreground">{phone}</span>
-                  </span>
-                </a>
-              )}
+              <a href={wa} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white"><WhatsAppIcon className="size-5" /></span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-foreground">WhatsApp</span>
+                  <span className="block truncate text-[12px] text-muted-foreground tabular-nums">{phone}</span>
+                </span>
+              </a>
             </motion.div>
           </>
         )}

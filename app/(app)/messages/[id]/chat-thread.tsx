@@ -196,7 +196,7 @@ export function ChatThread({ id }: { id: string }) {
   return (
     <div className="flex h-dvh flex-col md:h-[calc(100dvh-61px)]">
       {/* header */}
-      <div className="flex items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl">
+      <div className="relative z-10 flex items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl">
         <Link href="/messages" className="flex size-10 items-center justify-center rounded-full hover:bg-secondary" aria-label="back"><ArrowLeft className="size-5" /></Link>
         <button onClick={() => (isGroup ? setInfo(true) : otherId && setProfile(otherId))} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           {!conv ? (
