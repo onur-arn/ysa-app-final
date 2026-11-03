@@ -25,7 +25,7 @@ export function AuthShell({ children, footer, ownFooter }: { children: ReactNode
 /** Bottom action bar: stays visible at the bottom of the screen, even on long forms. */
 export function AuthFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="sticky bottom-0 -mx-6 mt-auto bg-gradient-to-t from-background from-70% to-transparent px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-6">
+    <div className="sticky bottom-0 -mx-6 mt-auto border-t border-border/60 bg-background/95 px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md">
       <div className="flex flex-col gap-3">{children}</div>
     </div>
   )

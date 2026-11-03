@@ -36,7 +36,7 @@ const slide = {
 
 function Field({ label, icon: Icon, children }: { label: ReactNode; icon?: React.ComponentType<{ className?: string }>; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <label className="flex flex-col gap-2">
       <span className="text-sm font-medium text-foreground">{label}</span>
       <span className="relative">
         {Icon && <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />}
@@ -103,7 +103,7 @@ export default function SignUpPage() {
   return (
     <AuthShell ownFooter>
         {step < 4 && (
-          <div className="mt-6 flex items-center gap-1.5">
+          <div className="mt-7 flex items-center gap-1.5">
             {[1, 2, 3].map((i) => <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", step >= i ? "bg-primary" : "bg-border")} />)}
           </div>
         )}
@@ -130,12 +130,12 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="mb-8 mt-8 text-center">
+      <div className="mb-10 mt-10 text-center">
         <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">İletişim bilgileri</h1>
         <p className="mt-1 text-sm text-muted-foreground">Adım 1 / 3</p>
       </div>
-      <form id="signup-1" onSubmit={(e) => { e.preventDefault(); if (canNext) onNext() }} className="flex flex-col gap-4">
-        <div className="flex flex-col items-center gap-1.5">
+      <form id="signup-1" onSubmit={(e) => { e.preventDefault(); if (canNext) onNext() }} className="flex flex-col gap-6 pb-8">
+        <div className="mb-2 flex flex-col items-center gap-2">
           <button type="button" onClick={() => fileRef.current?.click()} className="group relative flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-card transition-colors hover:border-primary">
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -150,7 +150,7 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
           {!photo && <p className="text-[11px] text-destructive">Profil fotoğrafı zorunludur *</p>}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <Field label="Ad" icon={User}><input required value={f.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Zeliha" autoComplete="given-name" className={field} /></Field>
           <Field label="Soyad" icon={User}><input required value={f.last_name} onChange={(e) => set("last_name", e.target.value)} placeholder="Kılınç" autoComplete="family-name" className={field} /></Field>
         </div>
@@ -180,7 +180,7 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
   return (
     <div className="flex flex-1 flex-col">
       <button onClick={onBack} className="mt-4 flex items-center gap-1 self-start text-sm text-muted-foreground"><ChevronLeft className="size-4" /> Geri</button>
-      <div className="mb-8 mt-2 text-center">
+      <div className="mb-10 mt-6 text-center">
         <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Görev & İstasyon</h1>
         <p className="mt-1 text-sm text-muted-foreground">Adım 2 / 3</p>
       </div>
@@ -220,7 +220,7 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
   return (
     <div className="flex flex-1 flex-col">
       <button onClick={onBack} className="mt-4 flex items-center gap-1 self-start text-sm text-muted-foreground"><ChevronLeft className="size-4" /> Geri</button>
-      <div className="mb-8 mt-2 text-center">
+      <div className="mb-10 mt-6 text-center">
         <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Eğitim & Memleket</h1>
         <p className="mt-1 text-sm text-muted-foreground">Adım 3 / 3</p>
       </div>
