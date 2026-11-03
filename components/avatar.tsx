@@ -49,7 +49,7 @@ export function AvatarStack({ ids, max = 4, size = 26 }: { ids: string[]; max?: 
   return (
     <span className="flex items-center">
       {ids.slice(0, max).map((id, i) => (
-        <span key={id} className="rounded-full ring-2 ring-card" style={{ marginLeft: i === 0 ? 0 : -size / 3 }}>
+        <span key={id} className="inline-flex rounded-full ring-2 ring-card" style={{ marginLeft: i === 0 ? 0 : -size / 3 }}>
           <MemberAvatar id={id} size={size} showOnline={false} />
         </span>
       ))}

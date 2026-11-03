@@ -2,9 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
-import { Heart, Loader2, Music, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react"
+import { Eye, Heart, Loader2, Music, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Avatar } from "@/components/avatar"
+import { Sheet } from "@/components/ui/sheet"
+import { MemberAvatar } from "@/components/avatar"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useStories } from "@/lib/data/hooks"
@@ -21,7 +23,7 @@ const SEEN_KEY = "ysa-seen-stories"
 
 export function StoriesBar() {
   const { me, stations, station } = useApp()
-  const { t, fmtRelative } = useI18n()
+  const { t, fmtRelative, fmtDate } = useI18n()
   const member = useMemberMap()
   const qc = useQueryClient()
   const { data: stories = [] } = useStories()
@@ -30,6 +32,7 @@ export function StoriesBar() {
   const [draft, setDraft] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [viewer, setViewer] = useState<{ station: string; mine: boolean; index: number } | null>(null)
+  const [viewers, setViewers] = useState<{ user_id: string; viewed_at: string; liked: boolean }[] | null>(null)
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(false)
   const [seen, setSeen] = useState<Set<string>>(new Set())
@@ -213,13 +216,43 @@ export function StoriesBar() {
               </div>
               <button className="absolute inset-y-0 left-0 w-1/3" onClick={() => step(-1)} onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} aria-label="prev" />
               <button className="absolute inset-y-0 right-0 w-2/3" onClick={() => step(1)} onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} aria-label="next" />
-              {current.author_id !== me.id && (
+              {current.author_id !== me.id ? (
                 <button onClick={() => like(current)} className="absolute bottom-8 right-6 flex size-12 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur" aria-label="like"><Heart className="size-6" /></button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setPaused(true)
+                    const { data } = await createClient().from("story_views").select("user_id, viewed_at, liked").eq("story_id", current.id).neq("user_id", me.id).order("viewed_at", { ascending: false })
+                    setViewers(data ?? [])
+                  }}
+                  className="absolute bottom-8 left-6 flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur"
+                  aria-label={t("story.viewers")}
+                >
+                  <Eye className="size-5" /> {t("story.viewers")}
+                </button>
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      <Sheet open={viewers !== null} onClose={() => { setViewers(null); setPaused(false) }} title={t("story.viewersTitle", { n: viewers?.length ?? 0 })}>
+        {viewers && viewers.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">{t("story.noViewers")}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {viewers?.map((v) => (
+              <div key={v.user_id} className="flex items-center gap-3">
+                <MemberAvatar id={v.user_id} size={34} showOnline={false} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">{member(v.user_id)?.full_name ?? t("common.formerMember")}</span>
+                  <span className="block text-[11px] text-muted-foreground">{fmtDate(v.viewed_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                </span>
+                {v.liked && <Heart className="size-4 shrink-0 fill-red-500 text-red-500" />}
+              </div>
+            ))}
+          </div>
+        )}
+      </Sheet>
     </>
   )
 }

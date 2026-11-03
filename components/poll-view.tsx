@@ -1,8 +1,10 @@
 "use client"
 
-import { Check } from "lucide-react"
+import { Check, Users } from "lucide-react"
 import { useState } from "react"
-import { AvatarStack } from "@/components/avatar"
+import { AvatarStack, MemberAvatar } from "@/components/avatar"
+import { Sheet } from "@/components/ui/sheet"
+import { useMemberMap } from "@/lib/data/hooks"
 import { useApp } from "@/components/providers/app-context"
 import { useI18n } from "@/lib/i18n/context"
 import { createClient } from "@/lib/supabase/client"
@@ -13,7 +15,9 @@ import { cn } from "@/lib/utils"
 export function PollView({ poll, onChanged, inverted }: { poll: Poll; onChanged: (next: Poll) => void; inverted?: boolean }) {
   const { me } = useApp()
   const { t } = useI18n()
+  const member = useMemberMap()
   const [busy, setBusy] = useState(false)
+  const [showVotes, setShowVotes] = useState(false)
   const mine = new Set(poll.poll_votes.filter((v) => v.user_id === me.id).map((v) => v.option_id))
   const voters = new Set(poll.poll_votes.map((v) => v.user_id)).size
   const options = [...poll.poll_options].sort((a, b) => a.position - b.position)
@@ -63,7 +67,40 @@ export function PollView({ poll, onChanged, inverted }: { poll: Poll; onChanged:
           </button>
         )
       })}
-      <p className="text-[11px] opacity-70">{t("poll.voters", { n: voters })}{poll.multiple ? ` · ${t("poll.multiple")}` : ""}</p>
+      {voters > 0 ? (
+        <button onClick={() => setShowVotes(true)} className={cn("flex items-center gap-1 text-[11px] font-medium underline-offset-2 hover:underline", inverted ? "opacity-80" : "text-primary")}>
+          <Users className="size-3" /> {t("poll.voters", { n: voters })}{poll.multiple ? ` · ${t("poll.multiple")}` : ""}
+        </button>
+      ) : (
+        <p className="text-[11px] opacity-70">{t("poll.voters", { n: voters })}{poll.multiple ? ` · ${t("poll.multiple")}` : ""}</p>
+      )}
+      <Sheet open={showVotes} onClose={() => setShowVotes(false)} title={t("poll.whoVoted")}>
+        <div className="flex flex-col gap-4">
+          {options.map((o) => {
+            const vs = poll.poll_votes.filter((v) => v.option_id === o.id)
+            return (
+              <div key={o.id}>
+                <p className="mb-1.5 flex items-center justify-between text-sm font-semibold text-foreground">
+                  <span className="truncate">{o.label}</span>
+                  <span className="ml-2 shrink-0 text-xs text-muted-foreground">{vs.length}</span>
+                </p>
+                {vs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("poll.noVotesOption")}</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {vs.map((v) => (
+                      <div key={v.user_id} className="flex items-center gap-2">
+                        <MemberAvatar id={v.user_id} size={26} showOnline={false} />
+                        <span className="truncate text-sm text-foreground">{member(v.user_id)?.full_name ?? t("common.formerMember")}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </Sheet>
     </div>
   )
 }
