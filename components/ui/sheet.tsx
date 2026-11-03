@@ -11,12 +11,15 @@ export function Sheet({
   title,
   children,
   footer,
+  zClass = "z-50",
 }: {
   open: boolean
   onClose: () => void
   title?: ReactNode
   children: ReactNode
   footer?: ReactNode
+  /** Stacking level, for sheets opened above a full-screen overlay. */
+  zClass?: string
 }) {
   useEffect(() => {
     if (!open) return
@@ -38,7 +41,7 @@ export function Sheet({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm"
+            className={cn("fixed inset-0 bg-foreground/40 backdrop-blur-sm", zClass)}
           />
           <motion.div
             role="dialog"
@@ -47,7 +50,7 @@ export function Sheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 320 }}
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl md:bottom-auto md:top-1/2 md:max-h-[85dvh] md:-translate-y-1/2 md:rounded-3xl"
+            className={cn("fixed inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl md:bottom-auto md:top-1/2 md:max-h-[85dvh] md:-translate-y-1/2 md:rounded-3xl", zClass)}
           >
             <div className="relative flex items-center justify-between gap-3 px-5 pb-2 pt-5">
               <div className="absolute left-1/2 top-2 h-1.5 w-10 -translate-x-1/2 rounded-full bg-border md:hidden" />

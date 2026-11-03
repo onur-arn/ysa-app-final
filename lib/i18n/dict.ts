@@ -270,6 +270,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "story.viewers": ["Görüntüleyenler","Vues","Views"],
   "story.viewersTitle": ["{n} görüntüleme","{n} vue(s)","{n} view(s)"],
   "story.noViewers": ["Henüz görüntüleyen yok","Personne pour l'instant","No viewers yet"],
+  "story.confirmDelete": ["Bu hikaye silinsin mi?","Supprimer cette story ?","Delete this story?"],
   "poll.whoVoted": ["Kimler oy verdi","Qui a voté","Who voted"],
   "poll.noVotesOption": ["Oy yok","Aucun vote","No votes"],
   "profile.age": ["{n} yaş","{n} ans","{n} y/o"],

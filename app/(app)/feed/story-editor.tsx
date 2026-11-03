@@ -402,7 +402,7 @@ function MusicSheet({ open, current, onClose, onPick }: { open: boolean; current
                 {q && !loading && results.length === 0 && <p className="py-6 text-center text-xs text-white/40">Sonuç yok</p>}
                 {results.map((t) => (
                   <div key={t.id} className="flex items-center gap-3 rounded-xl px-2 py-2 active:bg-white/10">
-                    <button onClick={() => { stop(); onPick({ url: t.preview, label: `${t.title} — ${t.artist.name}` }) }} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <button onClick={() => { stop(); onPick({ url: `/api/deezer-preview?id=${t.id}`, label: `${t.title} — ${t.artist.name}` }) }} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={t.album.cover_small} alt="" className="size-11 shrink-0 rounded-xl object-cover" />
                       <span className="min-w-0">

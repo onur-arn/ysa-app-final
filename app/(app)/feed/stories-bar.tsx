@@ -62,10 +62,11 @@ export function StoriesBar() {
     audioRef.current?.pause()
     if (!current) return
     if (current.music_preview_url) {
-      const a = new Audio(current.music_preview_url)
+      // One reused element: iOS only lets an element started by a tap keep playing on auto-advance.
+      const a = (audioRef.current ??= new Audio())
+      a.src = current.music_preview_url
       a.muted = muted
       void a.play().catch(() => {})
-      audioRef.current = a
     }
     void createClient().from("story_views").upsert({ story_id: current.id, user_id: me.id }, { onConflict: "story_id,user_id", ignoreDuplicates: true }).then()
     setSeen((prev) => {
@@ -115,6 +116,10 @@ export function StoriesBar() {
   }
 
   async function remove(s: Story) {
+    setPaused(true)
+    const ok = confirm(t("story.confirmDelete"))
+    setPaused(false)
+    if (!ok) return
     setViewer(null)
     qc.setQueryData<Story[]>(qk.stories, (old) => old?.filter((x) => x.id !== s.id))
     await createClient().from("stories").delete().eq("id", s.id)
@@ -134,12 +139,12 @@ export function StoriesBar() {
         <button disabled={isGuest(me)} onClick={() => (myStories.length ? setViewer({ station: me.station_id ?? "intl", mine: true, index: 0 }) : fileRef.current?.click())} className="flex w-16 shrink-0 flex-col items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale">
           <span className={cn("relative rounded-full p-[2.5px]", myStories.length ? "bg-primary" : "bg-transparent")}>
             <span className={cn("flex size-16 items-center justify-center overflow-hidden rounded-full border-2", myStories.length ? "border-card" : "border-dashed border-primary/50 bg-primary/5")}>
-              {myStories.length ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={myStories[myStories.length - 1].image_url} alt="" className="size-full object-cover" />
-              ) : me.photo_url ? (
+              {me.photo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={me.photo_url} alt="" className="size-full object-cover" />
+              ) : myStories.length ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={myStories[myStories.length - 1].image_url} alt="" className="size-full object-cover" />
               ) : (
                 <Plus className="size-6 text-primary" />
               )}
@@ -235,7 +240,7 @@ export function StoriesBar() {
           </motion.div>
         )}
       </AnimatePresence>
-      <Sheet open={viewers !== null} onClose={() => { setViewers(null); setPaused(false) }} title={t("story.viewersTitle", { n: viewers?.length ?? 0 })}>
+      <Sheet zClass="z-[70]" open={viewers !== null} onClose={() => { setViewers(null); setPaused(false) }} title={t("story.viewersTitle", { n: viewers?.length ?? 0 })}>
         {viewers && viewers.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">{t("story.noViewers")}</p>
         ) : (
