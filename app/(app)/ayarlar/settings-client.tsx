@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueryClient } from "@tanstack/react-query"
-import { Bell, BellRing, Camera, Check, GraduationCap, KeyRound, Lock, LogOut, Palette, ShieldCheck, Trash2, UserRound } from "lucide-react"
+import { Bell, BellRing, Camera, Check, GraduationCap, KeyRound, Lock, LogOut, Palette, Trash2, UserRound } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -16,7 +16,7 @@ import { useApp } from "@/components/providers/app-context"
 import { HOMETOWNS } from "@/lib/constants"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { canModerate, isAdmin } from "@/lib/permissions"
+import { isAdmin } from "@/lib/permissions"
 import { disablePush, enablePush, pushEnabled, pushSupported } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
 import { PALETTES, usePalette } from "@/lib/theme/context"
@@ -208,18 +208,11 @@ export function SettingsClient() {
         <p>Bilgi için <a href="mailto:secretaire@youthstation.org" className="underline underline-offset-2 hover:text-primary">secretaire@youthstation.org</a></p>
         <p>{t("settings.version")}</p>
         {/* 🔐 VIP only (secretaire@ / president@): discreet gold lock to the Yönetici panel */}
-        <div className="mt-1 flex items-center gap-2">
-          {isAdmin(me) && (
-            <Link href="/yonetici" aria-label="Yönetici" title="Yönetici" className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-white shadow-md shadow-amber-500/30 transition-transform active:scale-90">
-              <Lock className="size-4" strokeWidth={2.4} />
-            </Link>
-          )}
-          {canModerate(me) && (
-            <Link href="/moderasyon" aria-label="Moderasyon" title="Moderasyon" className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-500 to-slate-700 text-white shadow-md shadow-slate-500/30 transition-transform active:scale-90">
-              <ShieldCheck className="size-4" strokeWidth={2.4} />
-            </Link>
-          )}
-        </div>
+        {isAdmin(me) && (
+          <Link href="/yonetici" aria-label="Yönetici" title="Yönetici" className="mt-1 flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-white shadow-md shadow-amber-500/30 transition-transform active:scale-90">
+            <Lock className="size-4" strokeWidth={2.4} />
+          </Link>
+        )}
       </div>
 
       <Sheet open={igem} onClose={() => setIgem(false)} title={t("feed.igem")} footer={<Button className="w-full" size="lg" onClick={sendIgem}>{t("common.send")}</Button>}>

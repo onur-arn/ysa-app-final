@@ -44,7 +44,7 @@ create table if not exists profiles (
   hometown     text,
   station_id   text references stations(id) on delete set null default 'paris',
   position     text,
-  app_role     text not null default 'member' check (app_role in ('member', 'admin', 'moderator')),
+  app_role     text not null default 'member' check (app_role in ('member', 'admin')),
   status       text not null default 'pending' check (status in ('pending', 'active', 'suspended', 'rejected')),
   photo_url    text,
   igem_trained boolean not null default false,
@@ -58,13 +58,8 @@ create table if not exists profiles (
 -- set once the secretariat has been e-mailed about this sign-up (Kabul et / Reddet)
 alter table profiles add column if not exists signup_notified_at timestamptz;
 
-do $$ begin
-  alter table profiles drop constraint if exists profiles_app_role_check;
-  alter table profiles add constraint profiles_app_role_check check (app_role in ('member', 'admin', 'moderator'));
-exception when others then null; end $$;
-
 create unique index if not exists profiles_unique_position on profiles(station_id, position)
-  where position is not null and app_role <> 'moderator' and status in ('active', 'pending');
+  where position is not null and status in ('active', 'pending');
 
 -- ── HELPERS (security definer → no RLS recursion) ──────────────────────────
 create or replace function public.is_active() returns boolean
@@ -78,7 +73,7 @@ $$;
 -- Misafir: signed up without a station and not an admin → read-only on the feed
 create or replace function public.is_guest() returns boolean
 language sql stable security definer set search_path = public as $$
-  select coalesce((select station_id is null and app_role not in ('admin', 'moderator') from profiles where id = auth.uid()), true)
+  select coalesce((select station_id is null and app_role <> 'admin' from profiles where id = auth.uid()), true)
 $$;
 
 create or replace function public.my_station() returns text
@@ -101,33 +96,12 @@ language sql stable security definer set search_path = public as $$
   select exists(select 1 from vip_emails where email = lower(coalesce(mail, '')))
 $$;
 
--- 🛡️ Moderatör: declared internal-security account. Powerful but accountable —
--- shows up in Rehber with its role, every sensitive action is logged, and it can
--- only read a private conversation once a member has reported a message in it.
--- The address list has no RLS policy, so it is invisible to clients.
-create table if not exists moderator_emails (email text primary key);
-alter table moderator_emails enable row level security;
-
-create or replace function public.is_moderator_email(mail text) returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists(select 1 from moderator_emails where email = lower(coalesce(mail, '')))
-$$;
-create or replace function public.is_moderator() returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists(select 1 from profiles where id = auth.uid() and status = 'active' and app_role = 'moderator')
-$$;
--- "can moderate everything": moderator or platform admin
-create or replace function public.can_moderate() returns boolean
-language sql stable security definer set search_path = public as $$
-  select public.is_moderator() or public.is_admin()
-$$;
 
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
   boss boolean := public.is_vip_email(new.email);
-  mod boolean := public.is_moderator_email(new.email);
   photo text := nullif(meta->>'photo_url', '');
   -- "Misafir giriş": a guest has no station and the position "Misafir"
   guest boolean := coalesce((meta->>'guest')::boolean, false);
@@ -141,12 +115,12 @@ begin
     coalesce(meta->>'first_name', ''), coalesce(meta->>'last_name', ''),
     nullif(meta->>'phone', ''), nullif(meta->>'birthday', '')::date, nullif(meta->>'linkedin', ''),
     nullif(meta->>'hometown', ''),
-    case when guest or mod then null else coalesce(nullif(meta->>'station_id', ''), 'paris') end,
-    case when mod then 'Moderatör' when guest then 'Misafir' else nullif(meta->>'position', '') end,
+    case when guest then null else coalesce(nullif(meta->>'station_id', ''), 'paris') end,
+    case when guest then 'Misafir' else nullif(meta->>'position', '') end,
     coalesce((meta->>'igem_trained')::boolean, false), nullif(meta->>'igem_date', '')::date,
-    case when mod then 'moderator' when boss then 'admin' else 'member' end,
-    case when mod or boss then 'active' else 'pending' end,
-    case when mod or boss then now() end,
+    case when boss then 'admin' else 'member' end,
+    case when boss then 'active' else 'pending' end,
+    case when boss then now() end,
     photo
   )
   on conflict (id) do nothing;
@@ -163,7 +137,6 @@ begin
   -- trusted database triggers (points for messages) set this flag for one statement
   -- the admin role is reserved to VIP e-mails, whoever edits the row
   if new.app_role = 'admin' and not public.is_vip_email(new.email) then new.app_role := 'member'; end if;
-  if new.app_role = 'moderator' and not public.is_moderator_email(new.email) then new.app_role := 'member'; end if;
   if auth.uid() is null or public.is_admin() or current_setting('ysa.trusted', true) = 'on' then return new; end if;
   new.points := old.points;
   new.app_role := old.app_role;
@@ -194,8 +167,8 @@ drop policy if exists "profiles admin delete" on profiles;
 create policy "profiles read" on profiles for select to authenticated
   using (id = auth.uid() or public.is_intl() or (public.is_active() and status = 'active'));
 create policy "profiles self" on profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
-create policy "profiles intl" on profiles for update to authenticated using (public.is_intl() or public.is_moderator()) with check (public.is_intl() or public.is_moderator());
-create policy "profiles admin delete" on profiles for delete to authenticated using (public.is_admin() or public.is_moderator());
+create policy "profiles intl" on profiles for update to authenticated using (public.is_intl()) with check (public.is_intl());
+create policy "profiles admin delete" on profiles for delete to authenticated using (public.is_admin());
 
 create or replace function public.taken_positions() returns table(station_id text, "position" text)
 language sql stable security definer set search_path = public as $$
@@ -307,8 +280,8 @@ drop policy if exists "posts delete" on posts;
 create policy "posts read"   on posts for select to authenticated using (public.is_active());
 create policy "posts insert" on posts for insert to authenticated
   with check (author_id = auth.uid() and public.is_active() and not public.is_guest() and kind in ('post', 'igem') and (not pinned or public.is_intl()));
-create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl() or public.is_moderator());
-create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_intl() or public.is_moderator());
+create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl());
+create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
 -- Feed posts are kept 30 days, then deleted for good (pinned ones stay).
 -- Called opportunistically by the app on every feed load, and nightly if pg_cron exists.
@@ -347,7 +320,7 @@ drop policy if exists "pcomments insert" on post_comments;
 drop policy if exists "pcomments delete" on post_comments;
 create policy "pcomments read"   on post_comments for select to authenticated using (public.is_active());
 create policy "pcomments insert" on post_comments for insert to authenticated with check (author_id = auth.uid() and public.is_active());
-create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_intl() or public.is_moderator());
+create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
 -- ── STORIES (24 h, with editor + music) ─────────────────────────────────────
 create table if not exists stories (
@@ -373,9 +346,9 @@ alter table story_views enable row level security;
 drop policy if exists "stories read" on stories;
 drop policy if exists "stories insert" on stories;
 drop policy if exists "stories delete" on stories;
-create policy "stories read"   on stories for select to authenticated using (public.is_active() and (expires_at > now() or public.is_moderator()));
+create policy "stories read"   on stories for select to authenticated using (public.is_active() and expires_at > now());
 create policy "stories insert" on stories for insert to authenticated with check (author_id = auth.uid() and public.is_active() and not public.is_guest());
-create policy "stories delete" on stories for delete to authenticated using (author_id = auth.uid() or public.is_admin() or public.is_moderator());
+create policy "stories delete" on stories for delete to authenticated using (author_id = auth.uid() or public.is_admin());
 drop policy if exists "sviews read" on story_views;
 drop policy if exists "sviews own" on story_views;
 create policy "sviews read" on story_views for select to authenticated
@@ -402,7 +375,7 @@ alter table events enable row level security;
 
 create or replace function public.can_see_event(st text, priv boolean, owner uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.is_active() and (not priv or public.is_intl() or public.is_moderator() or owner = auth.uid() or st is null or st = public.my_station())
+  select public.is_active() and (not priv or public.is_intl() or owner = auth.uid() or st is null or st = public.my_station())
 $$;
 
 drop policy if exists "events read" on events;
@@ -416,7 +389,7 @@ create policy "events insert" on events for insert to authenticated
 create policy "events update" on events for update to authenticated
   using (created_by = auth.uid() or public.is_intl())
   with check (public.is_intl() or station_id = public.my_station());
-create policy "events delete" on events for delete to authenticated using (created_by = auth.uid() or public.is_intl() or public.is_moderator());
+create policy "events delete" on events for delete to authenticated using (created_by = auth.uid() or public.is_intl());
 
 -- Private events of other stations: only the time slot is shared, shown as 🔒 without any content.
 create or replace function public.locked_events()
@@ -455,7 +428,7 @@ alter table task_comments enable row level security;
 -- Stations only see their own tasks; Uluslararası Büro sees all (as in v1).
 create or replace function public.can_see_task(st text, assignee uuid, creator uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.is_active() and (public.is_intl() or public.is_moderator() or st = public.my_station())
+  select public.is_active() and (public.is_intl() or st = public.my_station())
 $$;
 drop policy if exists "tasks read" on tasks;
 drop policy if exists "tasks insert" on tasks;
@@ -465,7 +438,7 @@ create policy "tasks read"   on tasks for select to authenticated using (public.
 create policy "tasks insert" on tasks for insert to authenticated
   with check (created_by = auth.uid() and public.is_active() and (public.is_intl() or station_id = public.my_station()));
 create policy "tasks update" on tasks for update to authenticated using (public.can_see_task(station_id, assignee_id, created_by));
-create policy "tasks delete" on tasks for delete to authenticated using (created_by = auth.uid() or public.is_intl() or public.is_moderator());
+create policy "tasks delete" on tasks for delete to authenticated using (created_by = auth.uid() or public.is_intl());
 
 drop policy if exists "tcomments read" on task_comments;
 drop policy if exists "tcomments insert" on task_comments;
@@ -474,7 +447,7 @@ create policy "tcomments read" on task_comments for select to authenticated
   using (exists(select 1 from tasks t where t.id = task_id and public.can_see_task(t.station_id, t.assignee_id, t.created_by)));
 create policy "tcomments insert" on task_comments for insert to authenticated
   with check (author_id = auth.uid() and exists(select 1 from tasks t where t.id = task_id and public.can_see_task(t.station_id, t.assignee_id, t.created_by)));
-create policy "tcomments delete" on task_comments for delete to authenticated using (author_id = auth.uid() or public.is_admin() or public.is_moderator());
+create policy "tcomments delete" on task_comments for delete to authenticated using (author_id = auth.uid() or public.is_admin());
 
 create or replace function public.tasks_before() returns trigger language plpgsql as $$
 begin
@@ -540,10 +513,11 @@ language sql stable security definer set search_path = public as $$
   select exists(select 1 from conversation_members where conversation_id = cid and user_id = auth.uid() and is_admin)
 $$;
 
--- ── MODERATION: reports + audit log ──────────────────────────────────────────
--- Members report a message/post/comment/user. A report on a message unlocks that
--- one conversation for the moderator (read-only), and every open is written to
--- the audit log — nothing is secret.
+-- ── SIGNALEMENTS (reports) ───────────────────────────────────────────────────
+-- Any active member can report a post, comment, message, event, task or user.
+-- Reports land in the Yönetici panel of the admins (président & secrétaire): they
+-- are notified, see every report and — for a reported message — can open that one
+-- conversation read-only while the report is open.
 create table if not exists reports (
   id              uuid primary key default gen_random_uuid(),
   reporter_id     uuid references profiles(id) on delete set null,
@@ -561,76 +535,51 @@ create index if not exists reports_conv_idx on reports(conversation_id);
 alter table reports enable row level security;
 drop policy if exists "reports insert" on reports;
 drop policy if exists "reports read" on reports;
-drop policy if exists "reports moderate" on reports;
+drop policy if exists "reports manage" on reports;
 create policy "reports insert" on reports for insert to authenticated with check (reporter_id = auth.uid() and public.is_active());
-create policy "reports read"   on reports for select to authenticated using (reporter_id = auth.uid() or public.can_moderate());
-create policy "reports moderate" on reports for update to authenticated using (public.can_moderate()) with check (public.can_moderate());
+create policy "reports read"   on reports for select to authenticated using (reporter_id = auth.uid() or public.is_admin());
+create policy "reports manage" on reports for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
--- Audit trail of every sensitive moderator action (deletions, conversation opens).
-create table if not exists moderation_log (
-  id           uuid primary key default gen_random_uuid(),
-  moderator_id uuid references profiles(id) on delete set null,
-  action       text not null,
-  detail       jsonb not null default '{}',
-  created_at   timestamptz not null default now()
-);
-create index if not exists modlog_idx on moderation_log(created_at desc);
-alter table moderation_log enable row level security;
-drop policy if exists "modlog read" on moderation_log;
-create policy "modlog read" on moderation_log for select to authenticated using (public.can_moderate());
-
--- A moderator may read a conversation only while it has an open report.
-create or replace function public.can_moderate_conversation(cid uuid) returns boolean
+-- Admins may read a conversation only while it has an open report on one of its messages.
+create or replace function public.can_review_conversation(cid uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.can_moderate() and exists(
+  select public.is_admin() and exists(
     select 1 from reports r where r.conversation_id = cid and r.status = 'open'
   )
 $$;
 
--- Record a moderator action in the audit log (called by the app / other RPCs).
-create or replace function public.log_moderation(p_action text, p_detail jsonb default '{}') returns void
-language sql security definer set search_path = public as $$
-  insert into moderation_log (moderator_id, action, detail)
-  select auth.uid(), p_action, coalesce(p_detail, '{}')
-  where public.can_moderate()
-$$;
-
--- File a report (members). Returns the new report id.
+-- File a report (any active member). Notifies the admins (président & secrétaire).
 create or replace function public.report_content(p_kind text, p_target uuid, p_conversation uuid, p_reason text)
 returns uuid language plpgsql security definer set search_path = public as $$
-declare rid uuid;
+declare rid uuid; who text;
 begin
   if not public.is_active() then raise exception 'not allowed'; end if;
   insert into reports (reporter_id, kind, target_id, conversation_id, reason)
   values (auth.uid(), p_kind, p_target, p_conversation, nullif(p_reason, ''))
   returning id into rid;
+  select full_name into who from profiles where id = auth.uid();
+  insert into notifications (user_id, type, title, body, link, actor_id)
+  select pr.id, 'report', 'Yeni şikayet',
+         coalesce(who, 'Bir üye') || ' bir ' || p_kind || ' bildirdi' || coalesce(' · ' || nullif(p_reason, ''), ''),
+         '/yonetici?tab=reports', auth.uid()
+    from profiles pr where pr.app_role = 'admin' and pr.status = 'active' and pr.id <> auth.uid();
   return rid;
 end $$;
 
--- Moderator opens a reported conversation: logs the access, returns its messages.
-create or replace function public.moderator_open_conversation(cid uuid)
-returns setof messages language plpgsql security definer set search_path = public as $$
-begin
-  if not public.can_moderate_conversation(cid) then raise exception 'no open report for this conversation'; end if;
-  perform public.log_moderation('open_conversation', jsonb_build_object('conversation_id', cid));
-  return query select * from messages where conversation_id = cid order by created_at;
-end $$;
-
--- Resolve / dismiss a report.
+-- Resolve / dismiss a report (admins only).
 create or replace function public.resolve_report(rid uuid, p_status text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
-  if not public.can_moderate() then raise exception 'not allowed'; end if;
+  if not public.is_admin() then raise exception 'not allowed'; end if;
   if p_status not in ('resolved', 'dismissed') then raise exception 'bad status'; end if;
   update reports set status = p_status, resolved_by = auth.uid(), resolved_at = now() where id = rid;
-  perform public.log_moderation('resolve_report', jsonb_build_object('report_id', rid, 'status', p_status));
 end $$;
 
 drop policy if exists "conv read" on conversations;
 drop policy if exists "conv insert" on conversations;
 drop policy if exists "conv update" on conversations;
 drop policy if exists "conv delete" on conversations;
-create policy "conv read"   on conversations for select to authenticated using (public.is_member_of(id) or created_by = auth.uid() or public.can_moderate_conversation(id));
+create policy "conv read"   on conversations for select to authenticated using (public.is_member_of(id) or created_by = auth.uid() or public.can_review_conversation(id));
 create policy "conv insert" on conversations for insert to authenticated with check (created_by = auth.uid() and public.is_active());
 create policy "conv update" on conversations for update to authenticated using (public.is_conv_admin(id) or public.is_admin());
 create policy "conv delete" on conversations for delete to authenticated using (public.is_conv_admin(id) or public.is_admin());
@@ -653,7 +602,7 @@ drop policy if exists "cm insert" on conversation_members;
 drop policy if exists "cm update self" on conversation_members;
 drop policy if exists "cm update admin" on conversation_members;
 drop policy if exists "cm delete" on conversation_members;
-create policy "cm read"   on conversation_members for select to authenticated using (public.is_member_of(conversation_id) or public.can_moderate_conversation(conversation_id));
+create policy "cm read"   on conversation_members for select to authenticated using (public.is_member_of(conversation_id) or public.can_review_conversation(conversation_id));
 create policy "cm insert" on conversation_members for insert to authenticated with check (
   public.is_conv_admin(conversation_id) or exists(select 1 from conversations c where c.id = conversation_id and c.created_by = auth.uid())
 );
@@ -664,11 +613,11 @@ create policy "cm delete" on conversation_members for delete to authenticated us
 drop policy if exists "msg read" on messages;
 drop policy if exists "msg insert" on messages;
 drop policy if exists "msg update" on messages;
-create policy "msg read"   on messages for select to authenticated using (public.is_member_of(conversation_id) or public.can_moderate_conversation(conversation_id));
+create policy "msg read"   on messages for select to authenticated using (public.is_member_of(conversation_id) or public.can_review_conversation(conversation_id));
 create policy "msg insert" on messages for insert to authenticated with check (sender_id = auth.uid() and public.is_member_of(conversation_id));
 create policy "msg update" on messages for update to authenticated using (sender_id = auth.uid());
 drop policy if exists "msg delete" on messages;
-create policy "msg delete" on messages for delete to authenticated using (sender_id = auth.uid() or public.is_moderator());
+create policy "msg delete" on messages for delete to authenticated using (sender_id = auth.uid() or public.is_admin());
 
 create or replace function public.pin_message(cid uuid, mid uuid) returns void
 language plpgsql security definer set search_path = public as $$
@@ -989,7 +938,19 @@ begin
 end $$;
 create policy "files read"   on storage.objects for select to authenticated using (bucket_id = 'files' and public.can_access_file(name));
 create policy "files write"  on storage.objects for insert to authenticated with check (bucket_id = 'files' and public.can_access_file(name));
-create policy "files delete" on storage.objects for delete to authenticated using (bucket_id = 'files' and (owner = auth.uid() or public.is_admin() or public.is_moderator()));
+create policy "files delete" on storage.objects for delete to authenticated using (bucket_id = 'files' and (owner = auth.uid() or public.is_admin()));
+
+-- ── CLEANUP: remove the former "moderator" feature (now handled by admins) ────
+-- Safe to run on a database that never had it. Runs after every policy has been
+-- recreated above without any reference to these objects.
+drop function if exists public.moderator_open_conversation(uuid);
+drop function if exists public.log_moderation(text, jsonb);
+drop function if exists public.can_moderate_conversation(uuid);
+drop function if exists public.can_moderate();
+drop function if exists public.is_moderator();
+drop function if exists public.is_moderator_email(text);
+drop table if exists public.moderation_log;
+drop table if exists public.moderator_emails;
 
 -- ── REALTIME ────────────────────────────────────────────────────────────────
 do $$

@@ -14,7 +14,7 @@ import { fetchMessage, fetchMessages, PAGE } from "@/lib/data/fetchers"
 import { useConversation, useMemberMap, useMessages } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { canModerate, isIntl } from "@/lib/permissions"
+import { isAdmin, isIntl } from "@/lib/permissions"
 import { dispatchPush } from "@/lib/push"
 import { useHub, useOnline } from "@/lib/realtime/hub"
 import { createClient } from "@/lib/supabase/client"
@@ -49,7 +49,7 @@ export function ChatThread({ id }: { id: string }) {
   const otherOnline = useOnline(otherId)
   const otherRead = conv?.conversation_members.find((m) => m.user_id === otherId)?.last_read_at
   const memberIds = useMemo(() => conv?.conversation_members.map((m) => m.user_id) ?? [], [conv])
-  const modView = canModerate(me) && !!conv && !memberIds.includes(me.id) // opened read-only from a report
+  const modView = isAdmin(me) && !!conv && !memberIds.includes(me.id) // admin reviewing a reported conversation (read-only)
   const typers = typingIn(id).filter((u) => u !== me.id)
   const byId = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages])
 

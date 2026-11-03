@@ -8,13 +8,7 @@ export const isAdmin = (me: Who) => me?.app_role === "admin"
 export const isIntl = (me: Who) => !!me && (me.station_id === "intl" || me.app_role === "admin")
 
 /** "Misafir giriş" accounts: no station, read-mostly (cannot create station tasks/events) */
-export const isGuest = (me: Who) => !!me && !me.station_id && me.app_role !== "admin" && me.app_role !== "moderator"
+export const isGuest = (me: Who) => !!me && !me.station_id && me.app_role !== "admin"
 
 /** Members create tasks/events for their own station; intl for any */
 export const canTargetStation = (me: Who, stationId: string | null | undefined) => isIntl(me) || stationId === me?.station_id
-
-/** 🛡️ Declared moderator (internal security) — mirrors public.is_moderator() */
-export const isModerator = (me: Who) => me?.app_role === "moderator"
-
-/** Can moderate everything: moderator or platform admin — mirrors public.can_moderate() */
-export const canModerate = (me: Who) => isModerator(me) || isAdmin(me)

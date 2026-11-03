@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Cake, CalendarCheck, Flag, GraduationCap, Link2, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Trash2, Trophy } from "lucide-react"
+import { Cake, CalendarCheck, GraduationCap, Link2, Mail, MapPin, MessageCircle, Phone, Trash2, Trophy } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Avatar } from "@/components/avatar"
@@ -15,8 +15,7 @@ import { useApp } from "@/components/providers/app-context"
 import { useMemberMap } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
 import { LEVELS, levelOf, POINT_RULES } from "@/lib/levels"
-import { canModerate, isIntl, isModerator } from "@/lib/permissions"
-import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
+import { isIntl } from "@/lib/permissions"
 import { useOnline } from "@/lib/realtime/hub"
 import { useHydrated } from "@/lib/use-hydrated"
 import { createClient } from "@/lib/supabase/client"
@@ -88,7 +87,6 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
   const router = useRouter()
   const member = useMemberMap()
   const [opening, setOpening] = useState(false)
-  const [report, setReport] = useState<ReportTarget | null>(null)
   const online = useOnline(memberId)
   const p = member(memberId)
   if (!p) return <Sheet open={false} onClose={onClose}>{null}</Sheet>
@@ -128,7 +126,7 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
       <div className="flex flex-col items-center gap-2 text-center">
         <Avatar name={p.full_name} photoUrl={p.photo_url} stationId={p.station_id} size={92} online={online} />
         <h3 className="mt-1 font-heading text-xl font-bold text-foreground">{p.full_name}</h3>
-        {isModerator(p) ? <p className="flex items-center gap-1 text-sm font-semibold text-amber-600"><ShieldCheck className="size-4" /> {t("role.moderator")}</p> : p.position && <p className="text-sm font-medium text-primary">{p.position}</p>}
+        {p.position && <p className="text-sm font-medium text-primary">{p.position}</p>}
         <div className="flex flex-wrap justify-center gap-2">
           <StationBadge id={p.station_id} member />
           {online ? <Pill tone="green">● {t("common.online")}</Pill> : p.last_seen_at && <Pill>{t("common.lastSeen", { when: fmtDate(p.last_seen_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</Pill>}
@@ -156,13 +154,9 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
         })}
       </div>
 
-      {p.id !== me.id && (
-        <Button variant="ghost" className="mt-3 w-full" onClick={() => setReport({ kind: "user", targetId: p.id, label: p.full_name })}><Flag className="size-4" /> {t("report.action")}</Button>
+      {isIntl(me) && p.id !== me.id && p.app_role !== "admin" && (
+        <Button variant="ghost" className="mt-3 w-full text-destructive" onClick={deleteAccount}><Trash2 className="size-4" /> {t("directory.deleteAccount")}</Button>
       )}
-      {canModerate(me) && p.id !== me.id && p.app_role !== "admin" && (
-        <Button variant="ghost" className="mt-1 w-full text-destructive" onClick={deleteAccount}><Trash2 className="size-4" /> {t("directory.deleteAccount")}</Button>
-      )}
-      <ReportSheet target={report} onClose={() => setReport(null)} />
     </Sheet>
   )
 }

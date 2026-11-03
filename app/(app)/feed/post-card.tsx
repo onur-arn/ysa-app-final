@@ -15,7 +15,7 @@ import { useApp } from "@/components/providers/app-context"
 import { useMemberMap } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { canModerate, isIntl } from "@/lib/permissions"
+import { isIntl } from "@/lib/permissions"
 import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
@@ -34,7 +34,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const supabase = createClient()
   const author = member(post.author_id)
   const liked = post.post_likes.some((l) => l.user_id === me.id)
-  const canDelete = post.author_id === me.id || isIntl(me) || canModerate(me)
+  const canDelete = post.author_id === me.id || isIntl(me)
   const canReport = post.author_id !== me.id && post.kind !== "welcome"
 
   /** optimistic edit of this post in the shared feed cache */

@@ -10,7 +10,7 @@ import { FileChip } from "@/components/file-chip"
 import { PollView } from "@/components/poll-view"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useMessagePoll } from "@/lib/data/hooks"
-import { canModerate } from "@/lib/permissions"
+import { isAdmin } from "@/lib/permissions"
 import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
@@ -157,7 +157,7 @@ export function MessageBubble({
                 {m.content && <MenuItem icon={Copy} onClick={() => { setMenu(false); void navigator.clipboard?.writeText(m.content!) }}>{t("messages.copy")}</MenuItem>}
                 {canPin && !m.deleted_at && <MenuItem icon={Pin} onClick={() => { setMenu(false); onPin() }}>{t("messages.pin")}</MenuItem>}
                 {!mine && !m.deleted_at && <MenuItem icon={Flag} onClick={() => { setMenu(false); setReport({ kind: "message", targetId: m.id, conversationId: m.conversation_id, label: member(m.sender_id)?.full_name ?? "" }) }}>{t("report.action")}</MenuItem>}
-                {(mine || canModerate(me)) && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={() => { setMenu(false); onDelete() }}>{t("common.delete")}</MenuItem>}
+                {(mine || isAdmin(me)) && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={() => { setMenu(false); onDelete() }}>{t("common.delete")}</MenuItem>}
               </motion.div>
             </>
           )}

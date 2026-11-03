@@ -35,9 +35,6 @@ const users = [
 ]
 users.push([id(5), "misafir@x.org", { first_name: "Mert", last_name: "Misafir", guest: true, station_id: "lyon" }])
 for (const [uid, mail, meta] of users) await db.query(`insert into auth.users values ($1, $2, $3)`, [uid, mail, JSON.stringify(meta)])
-const MOD = id(6)   // declared moderator (internal security)
-await db.query(`insert into moderator_emails values ('mod@x.org')`)
-await db.query(`insert into auth.users values ($1, 'mod@x.org', $2)`, [MOD, JSON.stringify({ first_name: "Mod", last_name: "Erator" })])
 
 const as = async (uid, sql, params) => {
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '${uid}', false); set role authenticated;`)
@@ -52,7 +49,7 @@ const check = (name, cond) => { console.log((cond ? "PASS " : "FAIL ") + name); 
 // ── accounts ────────────────────────────────────────────────────────────────
 let r = await q(`select id, app_role, status from profiles order by id`)
 check("VIP e-mail becomes active admin", r[0].app_role === "admin" && r[0].status === "active")
-check("other sign-ups wait for approval", r.slice(1).filter((p) => p.id !== id(6)).every((p) => p.status === "pending" && p.app_role === "member"))
+check("other sign-ups wait for approval", r.slice(1).every((p) => p.status === "pending" && p.app_role === "member"))
 check("pending member sees only himself", (await as(B, `select id from profiles`)).rows.length === 1)
 await as(B, `update profiles set status = 'active', app_role = 'admin', points = 999 where id = '${B}'`)
 r = await q(`select status, app_role, points from profiles where id = '${B}'`)
@@ -165,31 +162,23 @@ check("cannot upload into someone else's chat", await fails(ADMIN, `insert into 
 
 // ── ranking ────────────────────────────────────────────────────────────────
 r = (await as(C, `select * from public.member_rank('${B}')`)).rows[0]
-check("member_rank works", Number(r.total) === 6 && Number(r.rank) >= 1)
+check("member_rank works", Number(r.total) === 5 && Number(r.rank) >= 1)
 const before = (await q(`select id, points from profiles order by id`)).map((x) => x.points).join()
 await db.exec(`select public.recompute_points()`)
 check("recompute_points matches the live counters", (await q(`select id, points from profiles order by id`)).map((x) => x.points).join() === before)
 
-// ── MODERATOR (internal security, declared + audited) ───────────────────────
-check("moderator e-mail becomes an active moderator", (await q(`select app_role, status from profiles where id = '${MOD}'`))[0].app_role === "moderator")
-check("non-moderator cannot self-assign the role", (async () => { await as(C, `update profiles set app_role = 'moderator' where id = '${C}'`); return (await q(`select app_role from profiles where id = '${C}'`))[0].app_role === "member" })())
-// conv is a group of B/C/D — MOD is an outsider
-check("moderator cannot read a conversation with no open report", (await as(MOD, `select id from messages where conversation_id = '${conv}'`)).rows.length === 0)
+// ── SIGNALEMENTS (reports → admins = président & secrétaire) ────────────────
+// conv is a group of B/C/D; ADMIN (intl admin) is an outsider.
+check("admin cannot read a conversation with no report", (await as(ADMIN, `select id from messages where conversation_id = '${conv}'`)).rows.length === 0)
 const rep = (await as(C, `select public.report_content('message', '${m1}', '${conv}', 'uygunsuz')`)).rows[0].report_content
-check("member can file a report", !!rep)
+check("any member can file a report", !!rep)
+check("reporting a message notifies the admins", (await q(`select count(*)::int n from notifications where type = 'report' and user_id = '${ADMIN}'`))[0].n === 1)
 check("reporter sees only their own report", (await as(C, `select id from reports`)).rows.length === 1 && (await as(B, `select id from reports`)).rows.length === 0)
-check("moderator sees every report", (await as(MOD, `select id from reports`)).rows.length === 1)
-check("open report unlocks the conversation for the moderator", (await as(MOD, `select id from messages where conversation_id = '${conv}'`)).rows.length === 3)
-await as(MOD, `select public.moderator_open_conversation('${conv}')`)
-check("opening a reported conversation is written to the audit log", (await as(MOD, `select id from moderation_log where action = 'open_conversation'`)).rows.length === 1)
-check("a normal member cannot read the audit log", await denied(C, `select id from moderation_log`))
-check("a normal member cannot open a reported conversation", await fails(C, `select public.moderator_open_conversation('${conv}')`))
-await as(MOD, `select public.resolve_report('${rep}', 'resolved')`)
-check("resolving a report re-locks the conversation", (await as(MOD, `select id from messages where conversation_id = '${conv}'`)).rows.length === 0)
-check("moderator can delete any message", (async () => { await as(MOD, `delete from messages where id = '${m1}'`); return (await q(`select id from messages where id = '${m1}'`)).length === 0 })())
-check("moderator can delete any post", (async () => { await as(MOD, `delete from posts where id = '${post}'`); return (await q(`select id from posts where id = '${post}'`)).length === 0 })())
-check("moderator can delete any task", (async () => { await as(MOD, `delete from tasks where id = '${task}'`); return (await q(`select id from tasks where id = '${task}'`)).length === 0 })())
-check("moderator can delete any account", (async () => { await as(MOD, `delete from profiles where id = '${id(5)}'`); return (await q(`select id from profiles where id = '${id(5)}'`)).length === 0 })())
+check("admin sees every report", (await as(ADMIN, `select id from reports`)).rows.length === 1)
+check("open report lets the admin read the reported conversation", (await as(ADMIN, `select id from messages where conversation_id = '${conv}'`)).rows.length === 3)
+check("a normal member cannot resolve a report", await fails(C, `select public.resolve_report('${rep}', 'resolved')`))
+await as(ADMIN, `select public.resolve_report('${rep}', 'resolved')`)
+check("resolving the report re-locks the conversation", (await as(ADMIN, `select id from messages where conversation_id = '${conv}'`)).rows.length === 0)
 
 console.log(failed ? `\n${failed} FAILED` : "\nALL PASSED")
 process.exit(failed ? 1 : 0)

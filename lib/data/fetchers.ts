@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { FEED_RETENTION_DAYS } from "@/lib/constants"
-import type { AppEvent, ConversationInfo, ConversationRow, Member, Message, ModLog, Notification, Poll, Post, Profile, Report, Story, Task } from "@/lib/types"
+import type { AppEvent, ConversationInfo, ConversationRow, Member, Message, Notification, Poll, Post, Profile, Report, Story, Task } from "@/lib/types"
 
 const sb = () => createClient()
 
@@ -85,6 +85,3 @@ export const fetchNotifications = async () =>
 
 export const fetchReports = async () =>
   must(await sb().from("reports").select("*").order("created_at", { ascending: false }).limit(200)) as Report[]
-
-export const fetchModLog = async () =>
-  must(await sb().from("moderation_log").select("*").order("created_at", { ascending: false }).limit(200)) as ModLog[]

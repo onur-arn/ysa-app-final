@@ -1,21 +1,23 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, Pencil, Search, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react"
+import { Check, Eye, Flag, Pencil, Search, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
-import { Avatar } from "@/components/avatar"
+import { Avatar, MemberAvatar } from "@/components/avatar"
 import { StationBadge } from "@/components/station-badge"
 import { Button } from "@/components/ui/button"
 import { Card, Chips, EmptyState, Pill, Segmented } from "@/components/ui/misc"
 import { Field, Select, Sheet } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
+import { useMemberMap, useReports } from "@/lib/data/hooks"
 import { POSITIONS } from "@/lib/constants"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
-import type { Profile } from "@/lib/types"
+import type { Profile, Report } from "@/lib/types"
 
 const ALL_KEY = ["admin-profiles"] as const
 
@@ -26,14 +28,17 @@ export function AdminClient() {
     queryFn: async () => ((await createClient().from("profiles").select("*").order("created_at", { ascending: false })).data ?? []) as Profile[],
   })
   const pending = profiles.filter((p) => p.status === "pending")
-  const [tab, setTab] = useState<"pending" | "members">("pending")
+  const [tab, setTab] = useState<"pending" | "members" | "reports">(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "reports" ? "reports" : "pending")
+  const { data: reports = [] } = useReports(true)
+  const openReports = reports.filter((r) => r.status === "open")
   return (
     <div className="flex flex-col gap-4 px-4 pt-4">
       <Segmented value={tab} onChange={setTab} layoutId="admin-tab" options={[
         { id: "pending", label: <span className="flex items-center gap-1.5"><UserCheck className="size-4" />{t("admin.pending")}</span>, count: pending.length },
         { id: "members", label: <span className="flex items-center gap-1.5"><Users className="size-4" />{t("admin.members")}</span> },
+        { id: "reports", label: <span className="flex items-center gap-1.5"><Flag className="size-4" />{t("mod.tab.reports")}</span>, count: openReports.length },
       ]} />
-      {tab === "pending" ? <Pending pending={pending} /> : <Members profiles={profiles.filter((p) => p.status !== "pending")} />}
+      {tab === "pending" ? <Pending pending={pending} /> : tab === "members" ? <Members profiles={profiles.filter((p) => p.status !== "pending")} /> : <Reports reports={reports} />}
     </div>
   )
 }
@@ -182,5 +187,58 @@ function MemberEditor({ profile, onClose }: { profile: Profile | null; onClose: 
         {!self && <Button variant="ghost" onClick={hardDelete} className="text-destructive"><Trash2 className="size-4" /> {t("admin.deleteAccount")}</Button>}
       </div>
     </Sheet>
+  )
+}
+
+function Reports({ reports }: { reports: Report[] }) {
+  const { t, fmtDate } = useI18n()
+  const qc = useQueryClient()
+  const router = useRouter()
+  const member = useMemberMap()
+  const open = reports.filter((r) => r.status === "open")
+
+  async function resolve(r: Report, status: "resolved" | "dismissed") {
+    const { error } = await createClient().rpc("resolve_report", { rid: r.id, p_status: status })
+    if (error) return toast(error.message, { error: true })
+    toast(t(`mod.status.${status}`))
+    void qc.invalidateQueries({ queryKey: qk.reports })
+  }
+
+  function openTarget(r: Report) {
+    if (r.kind === "message" && r.conversation_id) router.push(`/messages/${r.conversation_id}?mod=1`)
+    else if (r.kind === "post" || r.kind === "comment") router.push(`/feed?post=${r.target_id}`)
+    else if (r.kind === "event") router.push(`/agenda?event=${r.target_id}`)
+    else if (r.kind === "task") router.push(`/gorevler?open=${r.target_id}`)
+    else if (r.kind === "user") router.push(`/annuaire?member=${r.target_id}`)
+  }
+
+  if (open.length === 0) return <EmptyState icon={Flag} title={t("mod.noReports")} />
+  return (
+    <div className="flex flex-col gap-2">
+      {open.map((r) => (
+        <Card key={r.id} className="flex flex-col gap-2 p-3">
+          <div className="flex items-center gap-2">
+            <Pill tone="amber">{t(`mod.kind.${r.kind}`)}</Pill>
+            <span className="ml-auto text-xs text-muted-foreground">{fmtDate(r.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+          </div>
+          {r.reason && <p className="whitespace-pre-wrap break-words text-sm text-foreground">{r.reason}</p>}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {r.reporter_id && <MemberAvatar id={r.reporter_id} size={18} showOnline={false} />}
+            <span>{t("mod.reportedBy")}: {member(r.reporter_id ?? "")?.full_name ?? "—"}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <button onClick={() => openTarget(r)} className="flex items-center gap-1.5 rounded-xl bg-secondary px-3 py-1.5 text-xs font-semibold hover:bg-secondary/70">
+              <Eye className="size-3.5" /> {r.kind === "message" ? t("mod.openConversation") : t("common.view")}
+            </button>
+            <button onClick={() => resolve(r, "resolved")} className="flex items-center gap-1.5 rounded-xl bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/25">
+              <Check className="size-3.5" /> {t("mod.resolve")}
+            </button>
+            <button onClick={() => resolve(r, "dismissed")} className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-secondary">
+              <X className="size-3.5" /> {t("mod.dismiss")}
+            </button>
+          </div>
+        </Card>
+      ))}
+    </div>
   )
 }

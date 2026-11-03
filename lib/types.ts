@@ -14,7 +14,7 @@ export type Profile = {
   hometown: string | null
   station_id: string | null
   position: string | null
-  app_role: "member" | "admin" | "moderator"
+  app_role: "member" | "admin"
   status: "pending" | "active" | "suspended" | "rejected"
   photo_url: string | null
   igem_trained: boolean
@@ -168,13 +168,5 @@ export type Report = {
   status: "open" | "resolved" | "dismissed"
   resolved_by: string | null
   resolved_at: string | null
-  created_at: string
-}
-
-export type ModLog = {
-  id: string
-  moderator_id: string | null
-  action: string
-  detail: Record<string, unknown>
   created_at: string
 }
