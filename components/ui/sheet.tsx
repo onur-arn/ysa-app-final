@@ -107,7 +107,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
     >
       <span className="text-foreground">{label}</span>
       <span className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", checked ? "bg-primary" : "bg-muted-foreground/30")}>
-        <span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow transition-all", checked ? "left-[22px]" : "left-0.5")} />
+        <span className={cn("absolute top-0.5 size-5 rounded-full bg-card shadow transition-all", checked ? "left-[22px]" : "left-0.5")} />
       </span>
     </button>
   )

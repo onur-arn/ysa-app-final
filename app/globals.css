@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+@custom-variant dark (&:where([data-palette="gece"], [data-palette="gece"] *));
+
 
 html, body {
   /* clip (not hidden): blocks sideways scrolling without breaking position: sticky */
@@ -102,16 +104,47 @@ input[type="date"] {
   --sidebar-ring: var(--ring);
 }
 
-/* 1 · YouthStation — the white of the welcome page and the teal of the logo (default) */
-:root[data-palette="youthstation"] { --h: 215; --tint: 0; --bg-l: 1; --p-l: 0.62; --p-c: 0.075; }
-/* 2 · Okyanus — deep ocean blue */
-:root[data-palette="okyanus"] { --h: 255; --tint: 0.008; --bg-l: 0.982; --p-l: 0.52; --p-c: 0.15; }
-/* 3 · Lavanta — soft violet */
-:root[data-palette="lavanta"] { --h: 295; --tint: 0.01; --bg-l: 0.982; --p-l: 0.54; --p-c: 0.15; }
-/* 4 · Gül — warm rose */
-:root[data-palette="gul"] { --h: 8; --tint: 0.008; --bg-l: 0.985; --p-l: 0.6; --p-c: 0.16; }
-/* 5 · Orman — forest green */
-:root[data-palette="orman"] { --h: 155; --tint: 0.008; --bg-l: 0.982; --p-l: 0.52; --p-c: 0.11; }
+/* Bolder palettes: the page background, secondary surfaces and borders are tinted
+   with the hue, the primary colour is saturated. */
+/* 1 · Turkuaz — the white of the welcome page and the teal of the logo (default) */
+:root[data-palette="youthstation"] { --h: 215; --tint: 0; --bg-l: 1; --p-l: 0.6; --p-c: 0.085; }
+/* 2 · Pembe — bubble-gum pink */
+:root[data-palette="pembe"] {
+  --h: 350; --tint: 0.03; --bg-l: 0.975; --p-l: 0.63; --p-c: 0.22;
+  --secondary: oklch(0.93 0.05 350); --accent: oklch(0.9 0.08 350); --border: oklch(0.88 0.05 350); --input: oklch(0.91 0.04 350);
+}
+/* 3 · Kırmızı — deep red */
+:root[data-palette="kirmizi"] {
+  --h: 25; --tint: 0.018; --bg-l: 0.98; --p-l: 0.54; --p-c: 0.21;
+  --secondary: oklch(0.94 0.035 25); --accent: oklch(0.91 0.06 25); --border: oklch(0.89 0.035 25);
+}
+/* 4 · Gün Batımı — sunset orange */
+:root[data-palette="gunbatimi"] {
+  --h: 50; --tint: 0.03; --bg-l: 0.975; --p-l: 0.68; --p-c: 0.18;
+  --secondary: oklch(0.94 0.05 60); --accent: oklch(0.9 0.08 55); --border: oklch(0.88 0.05 55);
+}
+/* 5 · Gece — black & white */
+:root[data-palette="gece"] {
+  color-scheme: dark;
+  --background: oklch(0.13 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.19 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.21 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.15 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.23 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.28 0 0);
+  --accent-foreground: oklch(0.97 0 0);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.85 0 0);
+  --chart-1: oklch(0.97 0 0);
+}
 
 @layer base {
   * {

@@ -210,7 +210,7 @@ export function AudioMessage({
         >
           <div
             className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-75 ${
-              self ? "bg-white" : "bg-primary"
+              self ? "bg-primary-foreground" : "bg-primary"
             }`}
             style={{ width: `${pct}%` }}
           />

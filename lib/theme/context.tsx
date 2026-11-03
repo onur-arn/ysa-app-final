@@ -4,11 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 /** Interface colour themes (Ayarlar → Renk teması). Values live in app/globals.css. */
 export const PALETTES = [
-  { id: "youthstation", name: "YouthStation", swatch: "#67A2B2", bg: "#ffffff" },
-  { id: "okyanus", name: "Okyanus", swatch: "#3B6FD4", bg: "#f6f8fd" },
-  { id: "lavanta", name: "Lavanta", swatch: "#8B5CD6", bg: "#f9f7fd" },
-  { id: "gul", name: "Gül", swatch: "#E0607A", bg: "#fdf7f8" },
-  { id: "orman", name: "Orman", swatch: "#2F9466", bg: "#f6fbf8" },
+  { id: "youthstation", name: "Turkuaz", swatch: "#5a9bad", bg: "#ffffff" },
+  { id: "pembe", name: "Pembe", swatch: "#ec4899", bg: "#fdf0f5" },
+  { id: "gece", name: "Gece", swatch: "#ffffff", bg: "#121212" },
+  { id: "kirmizi", name: "Kırmızı", swatch: "#d62828", bg: "#fdf4f2" },
+  { id: "gunbatimi", name: "Gün Batımı", swatch: "#f08a24", bg: "#fdf4ea" },
 ] as const
 
 export type PaletteId = (typeof PALETTES)[number]["id"]

@@ -87,8 +87,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
               )}
             </button>
-            <Link href="/ayarlar" className="rounded-full ring-2 ring-border/60 transition-all hover:ring-primary/40" aria-label={t("nav.settings")}>
-              <Avatar name={me.full_name} photoUrl={me.photo_url} stationId={me.station_id} size={32} />
+            {/* block-level box exactly the size of the photo, so the ring is a perfect circle around it */}
+            <Link href="/ayarlar" className="flex size-9 shrink-0 items-center justify-center rounded-full ring-2 ring-border/60 transition-all hover:ring-primary/40" aria-label={t("nav.settings")}>
+              <Avatar name={me.full_name} photoUrl={me.photo_url} stationId={me.station_id} size={36} />
             </Link>
           </div>
         </header>
