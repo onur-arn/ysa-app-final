@@ -624,6 +624,24 @@ create policy "msg update" on messages for update to authenticated using (sender
 drop policy if exists "msg delete" on messages;
 create policy "msg delete" on messages for delete to authenticated using (sender_id = auth.uid() or public.is_admin());
 
+-- ❤️ Message reactions (a simple like). Visible to the conversation's members.
+create table if not exists message_likes (
+  message_id uuid not null references messages(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (message_id, user_id)
+);
+create index if not exists message_likes_msg_idx on message_likes(message_id);
+alter table message_likes enable row level security;
+drop policy if exists "mlikes read" on message_likes;
+drop policy if exists "mlikes insert" on message_likes;
+drop policy if exists "mlikes delete" on message_likes;
+create policy "mlikes read"   on message_likes for select to authenticated
+  using (exists(select 1 from messages m where m.id = message_id and public.is_member_of(m.conversation_id)));
+create policy "mlikes insert" on message_likes for insert to authenticated
+  with check (user_id = auth.uid() and exists(select 1 from messages m where m.id = message_id and public.is_member_of(m.conversation_id)));
+create policy "mlikes delete" on message_likes for delete to authenticated using (user_id = auth.uid());
+
 create or replace function public.pin_message(cid uuid, mid uuid) returns void
 language plpgsql security definer set search_path = public as $$
 begin
@@ -963,7 +981,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['profiles', 'notifications', 'posts', 'post_likes', 'post_comments', 'poll_votes', 'stories',
-                           'events', 'tasks', 'task_comments', 'conversations', 'conversation_members', 'messages', 'reports']
+                           'events', 'tasks', 'task_comments', 'conversations', 'conversation_members', 'messages', 'message_likes', 'reports']
   loop
     begin execute format('alter publication supabase_realtime add table %I', t);
     exception when duplicate_object then null; end;

@@ -70,12 +70,12 @@ export const fetchConversation = async (id: string) =>
 export const PAGE = 60
 
 export async function fetchMessages(convId: string, before?: string) {
-  let q = sb().from("messages").select("*").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(PAGE)
+  let q = sb().from("messages").select("*, message_likes(user_id)").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(PAGE)
   if (before) q = q.lt("created_at", before)
   return (must(await q) as Message[]).reverse()
 }
 
-export const fetchMessage = async (id: string) => must(await sb().from("messages").select("*").eq("id", id).maybeSingle()) as Message | null
+export const fetchMessage = async (id: string) => must(await sb().from("messages").select("*, message_likes(user_id)").eq("id", id).maybeSingle()) as Message | null
 
 export const fetchPoll = async (messageId: string) =>
   must(await sb().from("polls").select("*, poll_options(*), poll_votes(option_id, user_id)").eq("message_id", messageId).maybeSingle()) as Poll | null

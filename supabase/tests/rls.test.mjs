@@ -153,6 +153,13 @@ await as(C, `insert into poll_votes (poll_id, option_id, user_id) values ('${pol
 check("members vote in chat polls", (await q(`select count(*)::int n from poll_votes`))[0].n === 1)
 check("outsider cannot see the chat poll", (await as(ADMIN, `select id from polls where id = '${poll}'`)).rows.length === 0)
 
+// ── message likes ───────────────────────────────────────────────────────────
+check("a member can like a message", (await as(C, `insert into message_likes (message_id, user_id) values ('${m1}', '${C}')`), (await q(`select count(*)::int n from message_likes where message_id = '${m1}'`))[0].n === 1))
+check("an outsider cannot like a message", await fails(ADMIN, `insert into message_likes (message_id, user_id) values ('${m1}', '${ADMIN}')`))
+check("members see who liked", (await as(B, `select user_id from message_likes where message_id = '${m1}'`)).rows.length === 1)
+check("an outsider cannot read the likes", (await as(ADMIN, `select user_id from message_likes where message_id = '${m1}'`)).rows.length === 0)
+check("you cannot unlike someone else's like", (await as(B, `delete from message_likes where message_id = '${m1}' and user_id = '${C}'`), (await q(`select count(*)::int n from message_likes where message_id = '${m1}' and user_id = '${C}'`))[0].n === 1))
+
 // ── files (PDF) ────────────────────────────────────────────────────────────
 await db.exec(`insert into storage.objects (bucket_id, name, owner) values ('files', '${conv}/plan.pdf', '${B}'), ('files', 'feed/rapor.pdf', '${B}')`)
 check("chat PDF readable by conversation members", (await as(C, `select name from storage.objects where name like '${conv}%'`)).rows.length === 1)

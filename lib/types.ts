@@ -142,6 +142,7 @@ export type Message = {
   reply_to: string | null
   deleted_at: string | null
   created_at: string
+  message_likes?: { user_id: string }[]
   /** client-only: optimistic message not yet confirmed */
   pending?: boolean
 }

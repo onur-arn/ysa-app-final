@@ -48,7 +48,7 @@ function patchMessage(qc: QueryClient, msg: Message) {
   qc.setQueryData<Message[]>(qk.messages(msg.conversation_id), (old) => {
     if (!old) return old
     const i = old.findIndex((m) => m.id === msg.id)
-    if (i >= 0) return old.map((m) => (m.id === msg.id ? msg : m))
+    if (i >= 0) return old.map((m) => (m.id === msg.id ? { ...msg, message_likes: msg.message_likes ?? m.message_likes } : m))
     return [...old, msg].sort((a, b) => a.created_at.localeCompare(b.created_at))
   })
 }
@@ -100,7 +100,8 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
           setTyping((t) => (t[conv]?.[(p.new as Message).sender_id ?? ""] ? { ...t, [conv]: { ...t[conv], [(p.new as Message).sender_id!]: 0 } } : t))
           if ((p.new as Message).kind === "poll") void qc.invalidateQueries({ queryKey: qk.polls((p.new as Message).id) })
         })
-        .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, (p) => {
+        .on("postgres_changes", { event: "*", schema: "public", table: "message_likes" }, () => void qc.invalidateQueries({ queryKey: ["messages"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, (p) => {
           const row = (p.new ?? p.old) as { conversation_id?: string }
           refreshConvs()
           if (row.conversation_id) void qc.invalidateQueries({ queryKey: qk.conversation(row.conversation_id) })

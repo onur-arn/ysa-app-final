@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Pin, Trash2 } from "lucide-react"
+import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Heart, Pin, Trash2 } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { useRef, useState, type ReactNode } from "react"
@@ -14,6 +14,8 @@ import { deletedClass } from "@/lib/members"
 import { isAdmin } from "@/lib/permissions"
 import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { qk } from "@/lib/data/keys"
+import { createClient } from "@/lib/supabase/client"
+import { Sheet } from "@/components/ui/sheet"
 import { useI18n } from "@/lib/i18n/context"
 import type { Member, Message, Poll } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -73,10 +75,24 @@ export function MessageBubble({
   const { me, station } = useApp()
   const member = useMemberMap()
   const { t, fmtDate } = useI18n()
+  const qc = useQueryClient()
   const [menu, setMenu] = useState(false)
   const [report, setReport] = useState<ReportTarget | null>(null)
   const press = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTap = useRef(0)
+  const [showLikes, setShowLikes] = useState(false)
+  const likes = m.message_likes ?? []
+  const likedByMe = likes.some((l) => l.user_id === me.id)
   const mine = m.sender_id === me.id
+
+  async function toggleLike() {
+    if (m.deleted_at || m.pending || m.kind === "system") return
+    const updated = likedByMe ? likes.filter((l) => l.user_id !== me.id) : [...likes, { user_id: me.id }]
+    qc.setQueryData<Message[]>(qk.messages(m.conversation_id), (old) => old?.map((x) => (x.id === m.id ? { ...x, message_likes: updated } : x)))
+    const sb = createClient()
+    if (likedByMe) await sb.from("message_likes").delete().eq("message_id", m.id).eq("user_id", me.id)
+    else await sb.from("message_likes").insert({ message_id: m.id, user_id: me.id })
+  }
   const sender = member(m.sender_id)
   const color = station(sender?.station_id)?.color ?? "188 57% 48%"
   const firstOfGroup = !prev || prev.sender_id !== m.sender_id || prev.kind === "system" || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > 5 * 60_000
@@ -88,8 +104,14 @@ export function MessageBubble({
   const longPress = {
     onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); setMenu(true) },
     onTouchStart: () => { press.current = setTimeout(() => setMenu(true), 420) },
-    onTouchEnd: () => press.current && clearTimeout(press.current),
+    onTouchEnd: () => {
+      if (press.current) clearTimeout(press.current)
+      const now = Date.now()
+      if (now - lastTap.current < 300) { lastTap.current = 0; void toggleLike() } // double-tap to like
+      else lastTap.current = now
+    },
     onTouchMove: () => press.current && clearTimeout(press.current),
+    onDoubleClick: () => void toggleLike(),
   }
 
   return (
@@ -157,15 +179,37 @@ export function MessageBubble({
                 <MenuItem icon={CornerUpLeft} onClick={() => { setMenu(false); onReply() }}>{t("messages.reply")}</MenuItem>
                 {m.content && <MenuItem icon={Copy} onClick={() => { setMenu(false); void navigator.clipboard?.writeText(m.content!) }}>{t("messages.copy")}</MenuItem>}
                 {canPin && !m.deleted_at && <MenuItem icon={Pin} onClick={() => { setMenu(false); onPin() }}>{t("messages.pin")}</MenuItem>}
+                {!m.deleted_at && <MenuItem icon={Heart} onClick={() => { setMenu(false); void toggleLike() }}>{likedByMe ? t("messages.unlike") : t("messages.like")}</MenuItem>}
                 {!mine && !m.deleted_at && <MenuItem icon={Flag} onClick={() => { setMenu(false); setReport({ kind: "message", targetId: m.id, conversationId: m.conversation_id, label: member(m.sender_id)?.full_name ?? "" }) }}>{t("report.action")}</MenuItem>}
                 {(mine || isAdmin(me)) && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={() => { setMenu(false); onDelete() }}>{t("common.delete")}</MenuItem>}
               </motion.div>
             </>
           )}
         </AnimatePresence>
+        {likes.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowLikes(true) }}
+            className={cn("absolute -bottom-2.5 z-10 flex items-center gap-0.5 rounded-full border border-border bg-card px-1.5 py-[3px] text-[10px] font-semibold shadow-sm", mine ? "left-2" : "right-2")}
+            aria-label={t("messages.whoLiked")}
+          >
+            <Heart className={cn("size-3", likedByMe ? "fill-red-500 text-red-500" : "fill-red-500/70 text-red-500/70")} />
+            {likes.length > 1 && <span className="text-foreground">{likes.length}</span>}
+          </button>
+        )}
       </div>
       <button onClick={() => setMenu(true)} className="mb-2 hidden text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 md:block" aria-label="menu">⋯</button>
       <ReportSheet target={report} onClose={() => setReport(null)} />
+      <Sheet open={showLikes} onClose={() => setShowLikes(false)} title={t("messages.whoLiked")}>
+        <div className="flex flex-col gap-2">
+          {likes.map((l) => (
+            <div key={l.user_id} className="flex items-center gap-3">
+              <MemberAvatar id={l.user_id} size={32} showOnline={false} />
+              <span className="truncate text-sm text-foreground">{member(l.user_id)?.full_name ?? t("common.formerMember")}</span>
+              <Heart className="ml-auto size-4 shrink-0 fill-red-500 text-red-500" />
+            </div>
+          ))}
+        </div>
+      </Sheet>
     </div>
   )
 }
