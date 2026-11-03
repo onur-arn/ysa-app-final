@@ -1,10 +1,10 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
-import { Phone } from "lucide-react"
+import { PhoneCall } from "lucide-react"
 import { useState } from "react"
 import { useI18n } from "@/lib/i18n/context"
-import { whatsappUrl } from "@/lib/phone"
+import { telUrl, whatsappUrl } from "@/lib/phone"
 import { cn } from "@/lib/utils"
 
 export function WhatsAppIcon({ className }: { className?: string }) {
@@ -25,11 +25,12 @@ export function PhoneButton({ phone, className }: { phone: string | null | undef
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const wa = whatsappUrl(phone)
+  const tel = telUrl(phone)
 
   if (!wa) {
     return (
       <span className={cn("flex size-10 items-center justify-center rounded-full text-muted-foreground/40", className)} title={t("phone.none")}>
-        <Phone className="size-5" />
+        <PhoneCall className="size-5" />
       </span>
     )
   }
@@ -37,7 +38,7 @@ export function PhoneButton({ phone, className }: { phone: string | null | undef
   return (
     <div className="relative shrink-0">
       <button onClick={() => setOpen((v) => !v)} className={cn("flex size-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10", className)} aria-label={t("phone.call")}>
-        <Phone className="size-5" />
+        <PhoneCall className="size-5" />
       </button>
       <AnimatePresence>
         {open && (
@@ -49,11 +50,20 @@ export function PhoneButton({ phone, className }: { phone: string | null | undef
               exit={{ opacity: 0, scale: 0.92, y: -6 }}
               className="absolute right-0 top-12 z-[70] w-60 overflow-hidden rounded-2xl border border-border bg-popover p-1.5 shadow-2xl"
             >
+              {tel && (
+                <a href={tel} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><PhoneCall className="size-4" /></span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-foreground">{t("phone.callDirect")}</span>
+                    <span className="block truncate text-[12px] text-muted-foreground tabular-nums">{phone}</span>
+                  </span>
+                </a>
+              )}
               <a href={wa} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-secondary">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white"><WhatsAppIcon className="size-5" /></span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-foreground">WhatsApp</span>
-                  <span className="block truncate text-[12px] text-muted-foreground tabular-nums">{phone}</span>
+                  <span className="block truncate text-[12px] text-muted-foreground">{t("phone.whatsappChat")}</span>
                 </span>
               </a>
             </motion.div>

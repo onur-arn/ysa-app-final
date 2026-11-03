@@ -240,6 +240,8 @@ export const DICT: Record<string, [string, string, string]> = {
   "notif.readAll": ["Tümünü okundu yap","Tout marquer comme lu","Mark all as read"],
   "notif.title": ["Bildirimler","Notifications","Notifications"],
   "phone.call": ["Ara","Appeler","Call"],
+  "phone.callDirect": ["Ara","Appeler","Call"],
+  "phone.whatsappChat": ["Sohbeti aç","Ouvrir la discussion","Open chat"],
   "phone.none": ["Telefon numarası yok","Pas de numéro","No phone number"],
   "phone.whatsappHint": ["Sohbet veya arama","Discussion ou appel","Chat or call"],
   "points.grade": ["Rütbe","Grade","Rank"],

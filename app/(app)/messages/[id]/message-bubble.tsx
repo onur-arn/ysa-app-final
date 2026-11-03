@@ -162,7 +162,7 @@ export function MessageBubble({
           )}
           <p className={cn("flex items-center justify-end gap-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground", media ? "px-3 pb-1.5" : "mt-0.5")}>
             {fmtDate(m.created_at, { hour: "2-digit", minute: "2-digit" })}
-            {mine && (m.pending ? <Clock className="size-3" /> : readByOther ? <CheckCheck className="size-3.5" /> : <Check className="size-3" />)}
+            {mine && (m.pending ? <Clock className="size-3" /> : readByOther ? <CheckCheck className="size-3.5 text-sky-400" /> : <Check className="size-3" />)}
           </p>
         </div>
 
