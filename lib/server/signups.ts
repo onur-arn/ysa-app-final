@@ -44,8 +44,8 @@ export async function notifyAdminsOfSignup(email: string) {
             ${row("Telefon", p.phone)}
             ${row("Doğum tarihi", p.birthday)}
             ${row("LinkedIn", p.linkedin)}
-            ${row("Görev", p.position ?? "Üye")}
-            ${row("İstasyon", st?.name ?? p.station_id)}
+            ${row("Görev", p.position ?? "—")}
+            ${row("İstasyon", p.station_id ? st?.name ?? p.station_id : "Misafir (istasyonsuz)")}
             ${row("Memleket", p.hometown)}
             ${row("iGEM Eğitimi", p.igem_trained ? `✅ Evet${p.igem_date ? ` — ${p.igem_date}` : ""}` : "❌ Hayır")}
           </table>

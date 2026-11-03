@@ -96,6 +96,8 @@ declare
   meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
   boss boolean := public.is_vip_email(new.email);
   photo text := nullif(meta->>'photo_url', '');
+  -- "Misafir giriş": a guest has no station and the position "Misafir"
+  guest boolean := coalesce((meta->>'guest')::boolean, false);
 begin
   -- only accept sign-up photos uploaded through /api/signup-photo
   if photo is not null and photo not like '%/storage/v1/object/public/media/signup/%' then photo := null; end if;
@@ -105,7 +107,9 @@ begin
     new.id, new.email,
     coalesce(meta->>'first_name', ''), coalesce(meta->>'last_name', ''),
     nullif(meta->>'phone', ''), nullif(meta->>'birthday', '')::date, nullif(meta->>'linkedin', ''),
-    nullif(meta->>'hometown', ''), coalesce(nullif(meta->>'station_id', ''), 'paris'), nullif(meta->>'position', ''),
+    nullif(meta->>'hometown', ''),
+    case when guest then null else coalesce(nullif(meta->>'station_id', ''), 'paris') end,
+    case when guest then 'Misafir' else nullif(meta->>'position', '') end,
     coalesce((meta->>'igem_trained')::boolean, false), nullif(meta->>'igem_date', '')::date,
     case when boss then 'admin' else 'member' end,
     case when boss then 'active' else 'pending' end,

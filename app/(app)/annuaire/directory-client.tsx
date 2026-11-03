@@ -26,7 +26,7 @@ export function DirectoryClient() {
 
   const list = useMemo(() => {
     const s = q.trim().toLocaleLowerCase("tr")
-    return members.filter((p) => (st === "all" || p.station_id === st) && (!s || [p.full_name, p.position, p.hometown, p.station_id].some((x) => x?.toLocaleLowerCase("tr").includes(s))))
+    return members.filter((p) => (st === "all" || (st === "guest" ? !p.station_id : p.station_id === st)) && (!s || [p.full_name, p.position, p.hometown, p.station_id].some((x) => x?.toLocaleLowerCase("tr").includes(s))))
   }, [members, q, st])
 
   const ranking = [...list].sort((a, b) => b.points - a.points).slice(0, 50)
@@ -50,7 +50,7 @@ export function DirectoryClient() {
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("directory.searchMember")} className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" />
       </div>
-      <Chips value={st} onChange={setSt} options={[{ id: "all", label: `${t("common.all")} · ${members.length}` }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color }))]} />
+      <Chips value={st} onChange={setSt} options={[{ id: "all", label: `${t("common.all")} · ${members.length}` }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color })), ...(members.some((m) => !m.station_id) ? [{ id: "guest", label: "Misafir" }] : [])]} />
       <Segmented value={tab} onChange={setTab} layoutId="dir-tab" options={[
         { id: "list", label: <span className="flex items-center gap-1.5"><Users className="size-4" />{t("directory.members")}</span> },
         { id: "ranking", label: <span className="flex items-center gap-1.5"><Trophy className="size-4" />{t("points.ranking")}</span> },
@@ -70,7 +70,7 @@ export function DirectoryClient() {
                       <MemberAvatar id={p.id} size={44} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-semibold text-foreground">{p.full_name}{p.id === me.id && <span className="ml-1 text-xs font-normal text-muted-foreground">({t("messages.you")})</span>}</span>
-                        <span className="block truncate text-sm text-muted-foreground">{p.position ? `${p.position} · ` : ""}{station(p.station_id)?.name}</span>
+                        <span className="block truncate text-sm text-muted-foreground">{p.station_id ? `${p.position ? `${p.position} · ` : ""}${station(p.station_id)?.name ?? ""}` : "Misafir"}</span>
                       </span>
                     </button>
                   ))}

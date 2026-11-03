@@ -10,6 +10,7 @@ import { Sheet } from "@/components/ui/sheet"
 import { useApp } from "@/components/providers/app-context"
 import { useEvents } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
+import { isGuest } from "@/lib/permissions"
 import type { AppEvent } from "@/lib/types"
 import { cn, isSameDay } from "@/lib/utils"
 import { EventDetail } from "./event-detail"
@@ -30,7 +31,7 @@ export function AgendaClient() {
   const params = useSearchParams()
   const { data: events = [] } = useEvents()
   const [view, setView] = useState<"month" | "list">("month")
-  const [scope, setScope] = useState<"all" | "mine">("mine")
+  const [scope, setScope] = useState<"all" | "mine">(isGuest(me) ? "all" : "mine")
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [dir, setDir] = useState(0)
   const [day, setDay] = useState<Date | null>(null)
@@ -83,7 +84,7 @@ export function AgendaClient() {
         </button>
         <button onClick={() => go(1)} className="flex size-9 items-center justify-center rounded-xl hover:bg-secondary" aria-label="next"><ChevronRight className="size-5" /></button>
         <div className="ml-1 flex rounded-xl bg-secondary p-0.5">
-          <button onClick={() => setScope("mine")} className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", scope === "mine" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{station(me.station_id)?.short}</button>
+          {!isGuest(me) && <button onClick={() => setScope("mine")} className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", scope === "mine" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{station(me.station_id)?.short}</button>}
           <button onClick={() => setScope("all")} className={cn("rounded-lg px-2.5 py-1.5 text-xs font-semibold", scope === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{t("common.all")}</button>
         </div>
         <button onClick={() => setView(view === "month" ? "list" : "month")} className="flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary" aria-label="view">
@@ -171,14 +172,14 @@ export function AgendaClient() {
           <div className="flex flex-col gap-2">
             {onDay(day).map((e) => <EventRow key={e.id} e={e} onClick={() => { setDay(null); setOpenId(e.id) }} />)}
             {onDay(day).length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">{t("agenda.noEventsDay")}</p>}
-            <button onClick={() => { const d = day; setDay(null); setForm({ open: true, date: d }) }} className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-4 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary">
+            {!isGuest(me) && <button onClick={() => { const d = day; setDay(null); setForm({ open: true, date: d }) }} className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-4 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary">
               <Plus className="size-4" /> {t("agenda.newEvent")}
-            </button>
+            </button>}
           </div>
         )}
       </Sheet>
 
-      <Fab icon={Plus} label={t("agenda.newEvent")} onClick={() => setForm({ open: true, date: new Date() })} />
+      {!isGuest(me) && <Fab icon={Plus} label={t("agenda.newEvent")} onClick={() => setForm({ open: true, date: new Date() })} />}
       <EventDetail event={open} onClose={closeEvent} onEdit={(e) => { closeEvent(); setForm({ open: true, event: e }) }} />
       <EventForm open={form.open} event={form.event} defaultDate={form.date} onClose={() => setForm({ open: false })} />
     </div>

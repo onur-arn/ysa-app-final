@@ -135,7 +135,7 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
         <h3 className="mt-1 font-heading text-xl font-bold text-foreground">{p.full_name}</h3>
         {p.position && <p className="text-sm font-medium text-primary">{p.position}</p>}
         <div className="flex flex-wrap justify-center gap-2">
-          <StationBadge id={p.station_id} />
+          <StationBadge id={p.station_id} member />
           {online ? <Pill tone="green">● {t("common.online")}</Pill> : p.last_seen_at && <Pill>{t("common.lastSeen", { when: fmtDate(p.last_seen_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}</Pill>}
         </div>
       </div>

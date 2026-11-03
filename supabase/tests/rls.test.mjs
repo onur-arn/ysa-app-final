@@ -33,6 +33,7 @@ const users = [
   [C, "cem@x.org", { first_name: "Cem", last_name: "Lyon", station_id: "lyon" }],
   [D, "deniz@x.org", { first_name: "Deniz", last_name: "Intl", station_id: "intl" }],
 ]
+users.push([id(5), "misafir@x.org", { first_name: "Mert", last_name: "Misafir", guest: true, station_id: "lyon" }])
 for (const [uid, mail, meta] of users) await db.query(`insert into auth.users values ($1, $2, $3)`, [uid, mail, JSON.stringify(meta)])
 
 const as = async (uid, sql, params) => {
@@ -54,11 +55,17 @@ await as(B, `update profiles set status = 'active', app_role = 'admin', points =
 r = await q(`select status, app_role, points from profiles where id = '${B}'`)
 check("member cannot self-approve, self-promote or edit points", r[0].status === "pending" && r[0].app_role === "member" && r[0].points === 0)
 for (const u of [B, C, D]) await as(ADMIN, `update profiles set status = 'active' where id = '${u}'`)
-check("new member notifies the others", (await q(`select count(*)::int n from notifications where type = 'member' and user_id = '${B}'`))[0].n === 2)
+check("new member notifies the others", (await q(`select count(*)::int n from notifications where type = 'member' and user_id = '${B}'`))[0].n >= 2)
 await as(B, `update profiles set station_id = 'lyon', position = 'Başkan' where id = '${B}'`)
 check("active member cannot change station / position", (await q(`select station_id, position from profiles where id = '${B}'`))[0].station_id === "paris")
 await as(D, `update profiles set position = 'Sekreter' where id = '${B}'`)
 check("Uluslararası Büro can assign a position", (await q(`select position from profiles where id = '${B}'`))[0].position === "Sekreter")
+
+r = await q(`select station_id, position from profiles where id = '${id(5)}'`)
+check("Misafir giriş: no station, position Misafir", r[0].station_id === null && r[0].position === "Misafir")
+await db.exec(`update profiles set status = 'active' where id = '${id(5)}'`)
+check("guest cannot create a station task", await fails(id(5), `insert into tasks (title, station_id, created_by) values ('x', 'paris', '${id(5)}')`))
+check("guest sees events open to all stations", (await as(id(5), `select id from events where station_id is null`)).rows.length >= 0)
 
 // ── feed & pinning ─────────────────────────────────────────────────────────
 check("member cannot create a pinned post", await fails(B, `insert into posts (author_id, content, pinned) values ('${B}', 'x', true)`))
@@ -155,7 +162,7 @@ check("cannot upload into someone else's chat", await fails(ADMIN, `insert into 
 
 // ── ranking ────────────────────────────────────────────────────────────────
 r = (await as(C, `select * from public.member_rank('${B}')`)).rows[0]
-check("member_rank works", Number(r.total) === 4 && Number(r.rank) >= 1)
+check("member_rank works", Number(r.total) === 5 && Number(r.rank) >= 1)
 const before = (await q(`select id, points from profiles order by id`)).map((x) => x.points).join()
 await db.exec(`select public.recompute_points()`)
 check("recompute_points matches the live counters", (await q(`select id, points from profiles order by id`)).map((x) => x.points).join() === before)

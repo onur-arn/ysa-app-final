@@ -69,7 +69,7 @@ function Pending({ pending }: { pending: Profile[] }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StationBadge id={p.station_id} className="py-0.5 text-[11px]" />
+            <StationBadge id={p.station_id} member className="py-0.5 text-[11px]" />
             {p.position && <Pill tone="violet">{p.position}</Pill>}
             {p.igem_trained && <Pill tone="green">iGEM ✓</Pill>}
           </div>

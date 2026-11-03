@@ -1,7 +1,7 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
-import { Cake, Camera, Check, CheckCircle2, ChevronLeft, ExternalLink, Eye, EyeOff, Loader2, Lock, Mail, MapPin, Phone, User } from "lucide-react"
+import { Cake, Camera, Check, CheckCircle2, ChevronLeft, ExternalLink, Eye, EyeOff, Loader2, Lock, Mail, MapPin, Phone, User, UserRound } from "lucide-react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
@@ -23,9 +23,9 @@ function MapPlaceholder() {
 
 type Form = {
   first_name: string; last_name: string; email: string; password: string; phone: string; birthday: string; linkedin: string
-  station_id: string; position: string; igem: "evet" | "hayır" | ""; igem_date: string; hometown: string; consent: boolean
+  guest: boolean; station_id: string; position: string; igem: "evet" | "hayır" | ""; igem_date: string; hometown: string; consent: boolean
 }
-const EMPTY: Form = { first_name: "", last_name: "", email: "", password: "", phone: "", birthday: "", linkedin: "", station_id: "", position: "", igem: "", igem_date: "", hometown: "", consent: false }
+const EMPTY: Form = { first_name: "", last_name: "", email: "", password: "", phone: "", birthday: "", linkedin: "", guest: false, station_id: "", position: "", igem: "", igem_date: "", hometown: "", consent: false }
 
 const field = "h-12 w-full rounded-xl border border-input bg-card pl-10 pr-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
 const slide = {
@@ -55,6 +55,7 @@ export default function SignUpPage() {
   const [taken, setTaken] = useState<{ station_id: string; position: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [active, setActive] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -84,7 +85,7 @@ export default function SignUpPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: f.email.trim(), password: f.password, first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(),
-        birthday: f.birthday, linkedin: f.linkedin.trim(), station_id: f.station_id, position: f.position || null,
+        birthday: f.birthday, linkedin: f.linkedin.trim(), guest: f.guest, station_id: f.guest ? "" : f.station_id, position: f.guest ? null : f.position,
         igem_trained: f.igem === "evet", igem_date: f.igem === "evet" ? f.igem_date : "", hometown: f.hometown, photo_url: up.url,
       }),
     }).catch(() => null)
@@ -97,6 +98,7 @@ export default function SignUpPage() {
           : "Bir hata oluştu. Lütfen tekrar deneyin.",
       )
     }
+    setActive(!!((await res.json().catch(() => ({}))) as { active?: boolean }).active)
     go(1)
   }
 
@@ -112,7 +114,7 @@ export default function SignUpPage() {
             {step === 1 && <Step1 f={f} set={set} photo={photo} setPhoto={setPhoto} onNext={() => go(1)} />}
             {step === 2 && <Step2 f={f} set={set} stations={stations} taken={taken} onNext={() => go(1)} onBack={() => go(-1)} />}
             {step === 3 && <Step3 f={f} set={set} onBack={() => go(-1)} onSubmit={submit} loading={loading} error={error} />}
-            {step === 4 && <Success email={f.email} />}
+            {step === 4 && <Success email={f.email} active={active} />}
           </motion.div>
         </AnimatePresence>
     </AuthShell>
@@ -184,6 +186,22 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
         <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Görev & İstasyon</h1>
         <p className="mt-1 text-sm text-muted-foreground">Adım 2 / 3</p>
       </div>
+      {/* "Misafir giriş": join as a guest, without station nor görev */}
+      <button
+        type="button"
+        onClick={() => { set("guest", !f.guest); set("station_id", ""); set("position", "") }}
+        className={cn("mb-6 flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition-colors", f.guest ? "border-primary bg-primary/8" : "border-border bg-card")}
+      >
+        <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", f.guest ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}><UserRound className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-foreground">Misafir giriş</span>
+          <span className="block text-xs text-muted-foreground">İstasyon ve görev seçmeden misafir olarak katıl</span>
+        </span>
+        <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border-2", f.guest ? "border-primary bg-primary text-primary-foreground" : "border-border")}>{f.guest && <Check className="size-3.5" />}</span>
+      </button>
+      {!f.guest && (
+        <>
+          <div className="mb-6 flex items-center gap-3 text-xs font-medium text-muted-foreground"><span className="h-px flex-1 bg-border" /> veya istasyonunu seç <span className="h-px flex-1 bg-border" /></div>
       <div className="mb-5 flex flex-col gap-2">
         <span className="flex items-center gap-1.5 text-sm font-medium text-foreground"><MapPin className="size-4 text-muted-foreground" /> İstasyonun <span className="text-destructive">*</span></span>
         <div className="overflow-hidden rounded-2xl border border-border bg-card p-2">
@@ -202,15 +220,17 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
           })}
         </div>
       </div>
-      <label className="mb-6 flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-foreground">Görevin</span>
-        <select value={f.position} onChange={(e) => set("position", e.target.value)} disabled={!f.station_id} className="h-12 w-full appearance-none rounded-xl border border-input bg-card px-3 text-base text-foreground outline-none focus:border-ring disabled:opacity-60">
-          <option value="">Üye (görev yok)</option>
+      <label className="mb-6 flex flex-col gap-2">
+        <span className="text-sm font-medium text-foreground">Görevin <span className="text-destructive">*</span></span>
+        <select value={f.position} onChange={(e) => set("position", e.target.value)} disabled={!f.station_id} className={cn("h-12 w-full appearance-none rounded-xl border border-input bg-card px-3 text-base outline-none focus:border-ring disabled:opacity-60", f.position ? "text-foreground" : "text-muted-foreground")}>
+          <option value="" disabled>{f.station_id ? "Görevini seç" : "Önce istasyonunu seç"}</option>
           <optgroup label="Yönetim Kurulu">{BOARD_POSITIONS.map(option)}</optgroup>
           <optgroup label="Yürütme Kurulu">{EXECUTIVE_POSITIONS.map(option)}</optgroup>
         </select>
       </label>
-      <AuthFooter><Button size="lg" className="w-full" disabled={!f.station_id} onClick={onNext}>Devam et</Button></AuthFooter>
+        </>
+      )}
+      <AuthFooter><Button size="lg" className="w-full" disabled={!f.guest && (!f.station_id || !f.position)} onClick={onNext}>Devam et</Button></AuthFooter>
     </div>
   )
 }
@@ -268,7 +288,19 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
   )
 }
 
-function Success({ email }: { email: string }) {
+function Success({ email, active }: { email: string; active: boolean }) {
+  if (active) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <div className="mb-5 flex size-20 items-center justify-center rounded-full bg-emerald-500/15"><CheckCircle2 className="size-10 text-emerald-500" /></div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Hesabın aktif!</h1>
+          <p className="mt-3 text-sm text-muted-foreground text-pretty">Yönetici hesabı olarak doğrudan giriş yapabilirsin.</p>
+        </div>
+        <AuthFooter><Link href="/auth/login" className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">Giriş yap</Link></AuthFooter>
+      </div>
+    )
+  }
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center text-center">

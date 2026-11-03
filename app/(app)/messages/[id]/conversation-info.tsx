@@ -148,7 +148,7 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-medium text-foreground">{p?.full_name ?? t("common.formerMember")}</span>
                             <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                              <StationBadge id={p?.station_id} short className="px-1.5 py-0 text-[10px]" />
+                              <StationBadge id={p?.station_id} member short className="px-1.5 py-0 text-[10px]" />
                               {lvl.current.emoji} {p?.points ?? 0}
                               {m.is_admin && <span className="font-semibold text-primary">· {t("messages.admin")}</span>}
                             </span>

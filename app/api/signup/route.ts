@@ -17,17 +17,19 @@ export async function POST(req: NextRequest) {
   const photo = str(b.photo_url, 500)
   if (!/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "invalid_email" }, { status: 400 })
   if (password.length < 8) return NextResponse.json({ error: "weak_password" }, { status: 400 })
-  if (!str(b.first_name) || !str(b.last_name) || !str(b.station_id)) return NextResponse.json({ error: "missing_fields" }, { status: 400 })
+  const guest = b.guest === true
+  // a station member must pick a station and a görev; a guest ("Misafir giriş") has neither
+  if (!str(b.first_name) || !str(b.last_name) || (!guest && (!str(b.station_id) || !str(b.position)))) return NextResponse.json({ error: "missing_fields" }, { status: 400 })
   if (!photo.includes("/storage/v1/object/public/media/signup/")) return NextResponse.json({ error: "photo_required" }, { status: 400 })
 
   const admin = createAdminClient()
-  const { error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: {
       first_name: str(b.first_name, 60), last_name: str(b.last_name, 60), phone: str(b.phone, 40), birthday: str(b.birthday, 10),
-      linkedin: str(b.linkedin, 300), station_id: str(b.station_id, 40), position: str(b.position, 100) || null, hometown: str(b.hometown, 60),
+      linkedin: str(b.linkedin, 300), guest, station_id: guest ? "" : str(b.station_id, 40), position: guest ? null : str(b.position, 100), hometown: str(b.hometown, 60),
       igem_trained: b.igem_trained === true, igem_date: str(b.igem_date, 10), photo_url: photo,
     },
   })
@@ -39,6 +41,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "failed" }, { status: 500 })
   }
 
+  // VIP addresses are activated directly (no approval e-mail needed)
+  const { data: profile } = await admin.from("profiles").select("status").eq("id", created.user!.id).maybeSingle()
+  if (profile?.status === "active") return NextResponse.json({ ok: true, active: true })
   await notifyAdminsOfSignup(email).catch((e) => console.error("[signup] admin e-mail failed:", e))
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, active: false })
 }

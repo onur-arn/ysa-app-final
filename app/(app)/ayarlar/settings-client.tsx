@@ -134,7 +134,7 @@ export function SettingsClient() {
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={changePhoto} />
         <p className="mt-1 font-heading text-lg font-bold text-foreground">{me.full_name}</p>
         <p className="text-sm text-muted-foreground">{me.position ?? t("profile.member")} · {me.email}</p>
-        <StationBadge id={me.station_id} />
+        <StationBadge id={me.station_id} member />
       </Card>
 
       <div className="mt-4"><PointsCard userId={me.id} /></div>

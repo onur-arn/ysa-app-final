@@ -10,7 +10,7 @@ import { TASK_STATUSES } from "@/lib/constants"
 import { useTasks } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isIntl } from "@/lib/permissions"
+import { isGuest, isIntl } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/client"
 import type { Task, TaskStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -89,7 +89,7 @@ export function TasksClient() {
           {list.map((task) => <TaskCard key={task.id} task={task} showStation={intl} onClick={() => setOpenId(task.id)} onCycle={() => setTaskStatus(task, NEXT[task.status])} />)}
         </div>
       )}
-      <Fab icon={Plus} label={t("tasks.newTask")} onClick={() => setForm({ open: true })} />
+      {!isGuest(me) && <Fab icon={Plus} label={t("tasks.newTask")} onClick={() => setForm({ open: true })} />}
       <TaskDetail task={open} onClose={close} onEdit={(task) => { close(); setForm({ open: true, task }) }} onStatus={setTaskStatus} />
       <TaskForm open={form.open} task={form.task} onClose={() => setForm({ open: false })} />
     </div>
