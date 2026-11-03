@@ -75,6 +75,22 @@ export function ChatThread({ id }: { id: string }) {
     if (stick.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [messages.length, typers.length])
 
+  // On opening a conversation, land at the very bottom. Retry across frames so
+  // late-loading media (images, audio players) can't leave the view above it.
+  const booted = useRef<string | null>(null)
+  useEffect(() => {
+    if (!messages.length || booted.current === id) return
+    booted.current = id
+    stick.current = true
+    setAtBottom(true)
+    const toBottom = () => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight }
+    toBottom()
+    const r = requestAnimationFrame(toBottom)
+    const t1 = setTimeout(toBottom, 120)
+    const t2 = setTimeout(toBottom, 350)
+    return () => { cancelAnimationFrame(r); clearTimeout(t1); clearTimeout(t2) }
+  }, [id, messages.length])
+
   function onScroll() {
     const el = scrollRef.current!
     const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
