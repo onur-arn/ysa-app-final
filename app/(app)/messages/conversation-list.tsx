@@ -1,9 +1,9 @@
 "use client"
 
-import { AtSign, BellOff, Camera, MessageCirclePlus, MessagesSquare, Search, Users } from "lucide-react"
+import { AtSign, BellOff, Camera, Mail, MessageCirclePlus, MessagesSquare, Search, Trash2, Users } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { MemberPicker } from "@/components/member-picker"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,10 @@ import { EmptyState, Segmented } from "@/components/ui/misc"
 import { Field, Input, Sheet } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
+import { useQueryClient } from "@tanstack/react-query"
+import { motion } from "framer-motion"
 import { useConversations, useMemberMap } from "@/lib/data/hooks"
+import { qk } from "@/lib/data/keys"
 import { deletedClass } from "@/lib/members"
 import { useI18n } from "@/lib/i18n/context"
 import { useHub } from "@/lib/realtime/hub"
@@ -36,6 +39,19 @@ function ListSkeleton() {
 export function ConversationList() {
   const { t, fmtRelative } = useI18n()
   const { me } = useApp()
+  const qc = useQueryClient()
+
+  // swipe right → leave/hide the conversation; swipe left → mark it unread (bold)
+  async function deleteConv(c: ConversationRow) {
+    if (!confirm(t("messages.confirmDeleteConv"))) return
+    qc.setQueryData<ConversationRow[]>(qk.conversations, (old) => old?.filter((x) => x.id !== c.id))
+    await createClient().from("conversation_members").delete().eq("conversation_id", c.id).eq("user_id", me.id)
+  }
+  async function markUnread(c: ConversationRow) {
+    const before = new Date(new Date(c.last_message_at).getTime() - 1000).toISOString()
+    qc.setQueryData<ConversationRow[]>(qk.conversations, (old) => old?.map((x) => (x.id === c.id ? { ...x, unread: Math.max(1, x.unread) } : x)))
+    await createClient().from("conversation_members").update({ last_read_at: before }).eq("conversation_id", c.id).eq("user_id", me.id)
+  }
   const member = useMemberMap()
   const router = useRouter()
   const { typingIn } = useHub()
@@ -80,7 +96,8 @@ export function ConversationList() {
       ) : (
         <div className="flex flex-col">
           {list.map((c) => (
-            <Link key={c.id} href={`/messages/${c.id}`} prefetch className="flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-secondary/60 active:bg-secondary">
+            <SwipeRow key={c.id} onSwipeRight={() => deleteConv(c)} onSwipeLeft={() => markUnread(c)} deleteLabel={t("messages.deleteConv")} unreadLabel={t("messages.markUnread")}>
+            <Link href={`/messages/${c.id}`} prefetch className="flex items-center gap-3 bg-background px-2 py-2.5 transition-colors hover:bg-secondary/60 active:bg-secondary">
               {c.type === "dm" ? (
                 <MemberAvatar id={c.other_id} size={50} />
               ) : c.avatar_url ? (
@@ -101,11 +118,44 @@ export function ConversationList() {
                 </div>
               </div>
             </Link>
+            </SwipeRow>
           ))}
         </div>
       )}
 
       <NewConversation open={creating} onClose={() => setCreating(false)} onOpen={(id) => router.push(`/messages/${id}`)} />
+    </div>
+  )
+}
+
+/** Swipe a conversation row: right → delete, left → mark unread. */
+function SwipeRow({ children, onSwipeRight, onSwipeLeft, deleteLabel, unreadLabel }: {
+  children: ReactNode
+  onSwipeRight: () => void
+  onSwipeLeft: () => void
+  deleteLabel: string
+  unreadLabel: string
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-5 text-xs font-bold">
+        <span className="flex items-center gap-1.5 text-red-600"><Trash2 className="size-4" /> {deleteLabel}</span>
+        <span className="flex items-center gap-1.5 text-primary">{unreadLabel} <Mail className="size-4" /></span>
+      </div>
+      <motion.div
+        drag="x"
+        dragSnapToOrigin
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.6}
+        onDragEnd={(_, info) => {
+          if (info.offset.x > 90) onSwipeRight()
+          else if (info.offset.x < -90) onSwipeLeft()
+        }}
+        className="relative touch-pan-y rounded-2xl bg-background"
+      >
+        {children}
+      </motion.div>
     </div>
   )
 }
