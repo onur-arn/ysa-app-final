@@ -73,6 +73,20 @@ const CITY_MAP: Record<string, CityEntry> = {
   bitlis:          { adj: "Bitlisli",        joke: "Tarihi kalelerden selam getirdi 🏰" },
   tunceli:         { adj: "Tuncelili",       joke: "Munzur'un sularından selam getirdi 🏔️" },
   hakkari:         { adj: "Hakkarili",       joke: "Hakkari zirvelerinden indi 🏔️" },
+  adiyaman:        { adj: "Adıyamanlı",      joke: "Nemrut Dağı'nın zirvesinden indi 🗿" },
+  bilecik:         { adj: "Bilecikli",       joke: "Söğüt'ten tarihî bir selam getirdi 🏰" },
+  burdur:          { adj: "Burdurlu",        joke: "Salda Gölü'nün beyaz kumlarından geldi 🏝️" },
+  cankiri:         { adj: "Çankırılı",       joke: "Tuz mağarasından çıkıp geldi 🧂" },
+  eskisehir:       { adj: "Eskişehirli",     joke: "Çiböreğini yiyip Porsuk kıyısından geldi 🥟" },
+  kirikkale:       { adj: "Kırıkkaleli",     joke: "Kızılırmak kıyısından selam getirdi 🌊" },
+  kirklareli:      { adj: "Kırklarelili",    joke: "Istranca ormanlarından selam getirdi 🌲" },
+  kutahya:         { adj: "Kütahyalı",       joke: "Çinilerini boyayıp geldi 🏺" },
+  mardin:          { adj: "Mardinli",        joke: "Taş evlerin arasından süzülüp geldi 🏘️" },
+  osmaniye:        { adj: "Osmaniyeli",      joke: "Yer fıstığını cebine doldurup geldi 🥜" },
+  samsun:          { adj: "Samsunlu",        joke: "Bandırma Vapuru'ndan inip geldi 🚢" },
+  sirnak:          { adj: "Şırnaklı",        joke: "Cudi Dağı'ndan selam getirdi ⛰️" },
+  usak:            { adj: "Uşaklı",          joke: "Uşak halısına binip uçarak geldi 🧶" },
+  yalova:          { adj: "Yalovalı",        joke: "Termal sularında keyif yapıp geldi ♨️" },
 }
 
 function normalize(s: string) {
