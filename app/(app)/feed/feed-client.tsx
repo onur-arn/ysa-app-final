@@ -9,6 +9,7 @@ import { Card, EmptyState } from "@/components/ui/misc"
 import { useApp } from "@/components/providers/app-context"
 import { useFeed, useMembers } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
+import { isGuest } from "@/lib/permissions"
 import { Composer } from "./composer"
 import { PostCard } from "./post-card"
 import { StoriesBar } from "./stories-bar"
@@ -35,6 +36,7 @@ export function FeedClient() {
   const [composer, setComposer] = useState(false)
   const [profile, setProfile] = useState<string | null>(null)
   const focus = params.get("post")
+  const guest = isGuest(me) // Misafir: read-only
 
   useEffect(() => {
     if (focus && posts) document.getElementById(`post-${focus}`)?.scrollIntoView({ behavior: "smooth", block: "center" })
@@ -60,18 +62,18 @@ export function FeedClient() {
             <Cake className="ml-auto size-5 shrink-0 text-amber-500" />
           </Card>
         )}
-        <button onClick={() => setComposer(true)} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left text-sm text-muted-foreground shadow-sm">
-          <PenSquare className="size-4 text-primary" /> {t("feed.composerPlaceholder", { name: me.first_name })}
+        <button disabled={guest} onClick={() => setComposer(true)} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left text-sm text-muted-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none">
+          <PenSquare className={guest ? "size-4" : "size-4 text-primary"} /> {t("feed.composerPlaceholder", { name: me.first_name })}
         </button>
         {isPending && !posts ? (
           <FeedSkeleton />
         ) : !posts?.length ? (
-          <EmptyState icon={Newspaper} title={t("feed.empty")} text={t("feed.emptyText")} action={<Button onClick={() => setComposer(true)}>{t("feed.publish")}</Button>} />
+          <EmptyState icon={Newspaper} title={t("feed.empty")} text={t("feed.emptyText")} action={guest ? undefined : <Button onClick={() => setComposer(true)}>{t("feed.publish")}</Button>} />
         ) : (
           posts.map((p) => <PostCard key={p.id} post={p} highlight={p.id === focus} onOpenProfile={setProfile} />)
         )}
       </div>
-      <Composer open={composer} onClose={() => setComposer(false)} />
+      {!guest && <Composer open={composer} onClose={() => setComposer(false)} />}
       <ProfileSheet memberId={profile} onClose={() => setProfile(null)} />
     </div>
   )

@@ -77,82 +77,98 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
     void qc.prefetchQuery({ queryKey: qk.notifications, queryFn: f.fetchNotifications })
 
     let connectedOnce = false
-    const ch = supabase.channel("hub", { config: { presence: { key: me.id }, broadcast: { self: false } } })
-    ch
-      // ── messaging ─────────────────────────────────────────────────────
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
-        if (p.eventType === "DELETE") return refreshConvs()
-        patchMessage(qc, p.new as Message)
-        refreshConvs()
-        const conv = (p.new as Message).conversation_id
-        setTyping((t) => (t[conv]?.[(p.new as Message).sender_id ?? ""] ? { ...t, [conv]: { ...t[conv], [(p.new as Message).sender_id!]: 0 } } : t))
-        if ((p.new as Message).kind === "poll") void qc.invalidateQueries({ queryKey: qk.polls((p.new as Message).id) })
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, (p) => {
-        const row = (p.new ?? p.old) as { conversation_id?: string }
-        refreshConvs()
-        if (row.conversation_id) void qc.invalidateQueries({ queryKey: qk.conversation(row.conversation_id) })
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, (p) => {
-        const row = (p.new ?? p.old) as { id?: string }
-        refreshConvs()
-        if (row.id) void qc.invalidateQueries({ queryKey: qk.conversation(row.id) })
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "poll_votes" }, () => {
-        void qc.invalidateQueries({ queryKey: ["poll"] })
-        refreshFeed()
-      })
-      // ── bell ──────────────────────────────────────────────────────────
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${me.id}` }, (p) => {
-        void qc.invalidateQueries({ queryKey: qk.notifications })
-        const n = p.new as Notification & { pushed_at?: string | null }
-        // INSERT = new alert; UPDATE with pushed_at reset = one more message in a grouped chat entry.
-        // (Updates that only mark it read / pushed must not re-trigger the banner.)
-        if (p.eventType !== "DELETE" && !n.read_at && (p.eventType === "INSERT" || !n.pushed_at)) {
-          window.dispatchEvent(new CustomEvent(NOTIFY_EVENT, { detail: p.new }))
-        }
-      })
-      // ── feed, takvim, görevler, rehber ───────────────────────────────
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, refreshFeed)
-      .on("postgres_changes", { event: "*", schema: "public", table: "post_likes" }, refreshFeed)
-      .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, refreshFeed)
-      .on("postgres_changes", { event: "*", schema: "public", table: "stories" }, inv(qk.stories))
-      .on("postgres_changes", { event: "*", schema: "public", table: "events" }, inv(qk.events))
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, refreshTasks)
-      .on("postgres_changes", { event: "*", schema: "public", table: "task_comments" }, (p) => {
-        const row = (p.new ?? p.old) as { task_id?: string }
-        refreshTasks()
-        if (row.task_id) void qc.invalidateQueries({ queryKey: qk.taskComments(row.task_id) })
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (p) => {
-        refreshMembers()
-        if ((p.new as { id?: string })?.id === me.id) void qc.invalidateQueries({ queryKey: qk.me })
-      })
-      // ── presence & typing ────────────────────────────────────────────
-      .on("presence", { event: "sync" }, () => setOnline(new Set(Object.keys(ch.presenceState()))))
-      .on("broadcast", { event: "typing" }, ({ payload }) => {
-        const { conv, user } = payload as { conv: string; user: string }
-        setTyping((t) => ({ ...t, [conv]: { ...t[conv], [user]: Date.now() } }))
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          void ch.track({ at: Date.now() })
-          // After a reconnection, catch up on anything missed while the socket was down.
-          if (connectedOnce) void qc.invalidateQueries()
-          connectedOnce = true
-        }
-      })
-    channelRef.current = ch
+    let cancelled = false
+    let ch: RealtimeChannel | null = null
+    // realtime-js hands back an existing channel with the same topic, so a remount (React
+    // strict mode, account switch) would attach to the one still closing and lose events:
+    // wait for any previous "hub" to be fully removed before opening a fresh one.
+    const open = async () => {
+      for (const old of supabase.getChannels()) if (old.topic === "realtime:hub") await supabase.removeChannel(old)
+      if (cancelled) return
+      const hub = supabase.channel("hub", { config: { presence: { key: me.id }, broadcast: { self: false } } })
+      ch = hub
+      subscribeHub(hub)
+    }
+    const subscribeHub = (ch: RealtimeChannel) => {
+      ch
+        // ── messaging ─────────────────────────────────────────────────────
+        .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
+          if (p.eventType === "DELETE") return refreshConvs()
+          patchMessage(qc, p.new as Message)
+          refreshConvs()
+          const conv = (p.new as Message).conversation_id
+          setTyping((t) => (t[conv]?.[(p.new as Message).sender_id ?? ""] ? { ...t, [conv]: { ...t[conv], [(p.new as Message).sender_id!]: 0 } } : t))
+          if ((p.new as Message).kind === "poll") void qc.invalidateQueries({ queryKey: qk.polls((p.new as Message).id) })
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, (p) => {
+          const row = (p.new ?? p.old) as { conversation_id?: string }
+          refreshConvs()
+          if (row.conversation_id) void qc.invalidateQueries({ queryKey: qk.conversation(row.conversation_id) })
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, (p) => {
+          const row = (p.new ?? p.old) as { id?: string }
+          refreshConvs()
+          if (row.id) void qc.invalidateQueries({ queryKey: qk.conversation(row.id) })
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "poll_votes" }, () => {
+          void qc.invalidateQueries({ queryKey: ["poll"] })
+          refreshFeed()
+        })
+        // ── bell ──────────────────────────────────────────────────────────
+        .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${me.id}` }, (p) => {
+          void qc.invalidateQueries({ queryKey: qk.notifications })
+          const n = p.new as Notification & { pushed_at?: string | null }
+          // INSERT = new alert; UPDATE with pushed_at reset = one more message in a grouped chat entry.
+          // (Updates that only mark it read / pushed must not re-trigger the banner.)
+          if (p.eventType !== "DELETE" && !n.read_at && (p.eventType === "INSERT" || !n.pushed_at)) {
+            window.dispatchEvent(new CustomEvent(NOTIFY_EVENT, { detail: p.new }))
+          }
+        })
+        // ── feed, takvim, görevler, rehber ───────────────────────────────
+        .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, refreshFeed)
+        .on("postgres_changes", { event: "*", schema: "public", table: "post_likes" }, refreshFeed)
+        .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, refreshFeed)
+        .on("postgres_changes", { event: "*", schema: "public", table: "stories" }, inv(qk.stories))
+        .on("postgres_changes", { event: "*", schema: "public", table: "events" }, inv(qk.events))
+        .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, refreshTasks)
+        .on("postgres_changes", { event: "*", schema: "public", table: "task_comments" }, (p) => {
+          const row = (p.new ?? p.old) as { task_id?: string }
+          refreshTasks()
+          if (row.task_id) void qc.invalidateQueries({ queryKey: qk.taskComments(row.task_id) })
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (p) => {
+          refreshMembers()
+          if ((p.new as { id?: string })?.id === me.id) void qc.invalidateQueries({ queryKey: qk.me })
+        })
+        // ── presence & typing ────────────────────────────────────────────
+        .on("presence", { event: "sync" }, () => setOnline(new Set(Object.keys(ch.presenceState()))))
+        .on("broadcast", { event: "typing" }, ({ payload }) => {
+          const { conv, user } = payload as { conv: string; user: string }
+          setTyping((t) => ({ ...t, [conv]: { ...t[conv], [user]: Date.now() } }))
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            void ch.track({ at: Date.now() })
+            // After a reconnection, catch up on anything missed while the socket was down.
+            if (connectedOnce) void qc.invalidateQueries()
+            connectedOnce = true
+          }
+        })
+      channelRef.current = ch
+    }
+    void open()
 
     // "Last seen" is written when the app opens and when it goes to the background —
     // live "online" status comes from presence, so no periodic writes are needed.
-    const seen = () => void supabase.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("id", me.id)
+    const seen = () => void supabase.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("id", me.id).then()
     const onHide = () => document.visibilityState === "hidden" && seen()
     seen()
     document.addEventListener("visibilitychange", onHide)
     return () => {
       document.removeEventListener("visibilitychange", onHide)
-      void supabase.removeChannel(ch)
+      cancelled = true
+      if (ch) void supabase.removeChannel(ch)
+      channelRef.current = null
     }
   }, [qc, me.id])
 

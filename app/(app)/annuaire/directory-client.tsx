@@ -50,7 +50,7 @@ export function DirectoryClient() {
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("directory.searchMember")} className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" />
       </div>
-      <Chips value={st} onChange={setSt} options={[{ id: "all", label: `${t("common.all")} · ${members.length}` }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color })), ...(members.some((m) => !m.station_id) ? [{ id: "guest", label: "Misafir" }] : [])]} />
+      <Chips value={st} onChange={setSt} options={[{ id: "all", label: t("common.all") }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color })), ...(members.some((m) => !m.station_id) ? [{ id: "guest", label: "Misafir" }] : [])]} />
       <Segmented value={tab} onChange={setTab} layoutId="dir-tab" options={[
         { id: "list", label: <span className="flex items-center gap-1.5"><Users className="size-4" />{t("directory.members")}</span> },
         { id: "ranking", label: <span className="flex items-center gap-1.5"><Trophy className="size-4" />{t("points.ranking")}</span> },

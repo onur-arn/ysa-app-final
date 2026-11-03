@@ -70,6 +70,12 @@ create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists(select 1 from profiles where id = auth.uid() and status = 'active' and app_role = 'admin')
 $$;
+-- Misafir: signed up without a station and not an admin → read-only on the feed
+create or replace function public.is_guest() returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select station_id is null and app_role <> 'admin' from profiles where id = auth.uid()), true)
+$$;
+
 create or replace function public.my_station() returns text
 language sql stable security definer set search_path = public as $$
   select station_id from profiles where id = auth.uid()
@@ -272,7 +278,7 @@ drop policy if exists "posts update" on posts;
 drop policy if exists "posts delete" on posts;
 create policy "posts read"   on posts for select to authenticated using (public.is_active());
 create policy "posts insert" on posts for insert to authenticated
-  with check (author_id = auth.uid() and public.is_active() and kind in ('post', 'igem') and (not pinned or public.is_intl()));
+  with check (author_id = auth.uid() and public.is_active() and not public.is_guest() and kind in ('post', 'igem') and (not pinned or public.is_intl()));
 create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl());
 create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
@@ -325,7 +331,7 @@ drop policy if exists "stories read" on stories;
 drop policy if exists "stories insert" on stories;
 drop policy if exists "stories delete" on stories;
 create policy "stories read"   on stories for select to authenticated using (public.is_active() and expires_at > now());
-create policy "stories insert" on stories for insert to authenticated with check (author_id = auth.uid() and public.is_active());
+create policy "stories insert" on stories for insert to authenticated with check (author_id = auth.uid() and public.is_active() and not public.is_guest());
 create policy "stories delete" on stories for delete to authenticated using (author_id = auth.uid() or public.is_admin());
 drop policy if exists "sviews read" on story_views;
 drop policy if exists "sviews own" on story_views;

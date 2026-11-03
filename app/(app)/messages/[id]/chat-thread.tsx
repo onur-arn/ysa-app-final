@@ -56,7 +56,7 @@ export function ChatThread({ id }: { id: string }) {
   const markRead = useCallback(() => {
     qc.setQueryData<ConversationRow[]>(qk.conversations, (old) => old?.map((c) => (c.id === id ? { ...c, unread: 0, mentioned: false } : c)))
     qc.setQueryData<Notification[]>(qk.notifications, (old) => old?.map((n) => (n.link === `/messages/${id}` && !n.read_at ? { ...n, read_at: new Date().toISOString() } : n)))
-    void supabase.rpc("mark_read", { cid: id })
+    void supabase.rpc("mark_read", { cid: id }).then() // query builders are lazy: .then() sends it
   }, [id, qc]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const last = messages[messages.length - 1]

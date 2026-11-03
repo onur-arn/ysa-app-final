@@ -10,7 +10,7 @@ import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useStories } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isAdmin } from "@/lib/permissions"
+import { isAdmin, isGuest } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/client"
 import type { Story } from "@/lib/types"
 import { uploadMedia } from "@/lib/upload"
@@ -64,7 +64,7 @@ export function StoriesBar() {
       void a.play().catch(() => {})
       audioRef.current = a
     }
-    void createClient().from("story_views").upsert({ story_id: current.id, user_id: me.id }, { onConflict: "story_id,user_id", ignoreDuplicates: true })
+    void createClient().from("story_views").upsert({ story_id: current.id, user_id: me.id }, { onConflict: "story_id,user_id", ignoreDuplicates: true }).then()
     setSeen((prev) => {
       const next = new Set(prev).add(current.id)
       try { localStorage.setItem(SEEN_KEY, JSON.stringify([...next].slice(-300))) } catch {}
@@ -128,7 +128,7 @@ export function StoriesBar() {
     <>
       <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-3">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
-        <button onClick={() => (myStories.length ? setViewer({ station: me.station_id ?? "intl", mine: true, index: 0 }) : fileRef.current?.click())} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+        <button disabled={isGuest(me)} onClick={() => (myStories.length ? setViewer({ station: me.station_id ?? "intl", mine: true, index: 0 }) : fileRef.current?.click())} className="flex w-16 shrink-0 flex-col items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale">
           <span className={cn("relative rounded-full p-[2.5px]", myStories.length ? "bg-primary" : "bg-transparent")}>
             <span className={cn("flex size-16 items-center justify-center overflow-hidden rounded-full border-2", myStories.length ? "border-card" : "border-dashed border-primary/50 bg-primary/5")}>
               {myStories.length ? (
@@ -144,7 +144,7 @@ export function StoriesBar() {
             <span
               role="button"
               tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); fileRef.current?.click() }}
+              onClick={(e) => { e.stopPropagation(); if (!isGuest(me)) fileRef.current?.click() }}
               className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow ring-2 ring-background"
             >
               {uploading ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" strokeWidth={3} />}
