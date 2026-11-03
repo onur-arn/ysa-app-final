@@ -3,7 +3,30 @@
 import { QueryClient } from "@tanstack/react-query"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
+
+/**
+ * framer-motion 12.x throws "Failed to execute releasePointerCapture … the object
+ * can not be found here" on touch devices when a gesture element releases a pointer
+ * it no longer holds (e.g. layout/menu re-render mid-tap). In dev this pops the error
+ * overlay and blocks sending messages on the phone. Guard the call so it only runs
+ * when the pointer really is captured — a semantic no-op otherwise.
+ */
+function usePointerCaptureGuard() {
+  useEffect(() => {
+    const proto = Element.prototype as Element & { __ysaPointerPatched?: boolean }
+    if (proto.__ysaPointerPatched) return
+    const orig = proto.releasePointerCapture
+    proto.releasePointerCapture = function (pointerId: number) {
+      try {
+        if (this.hasPointerCapture?.(pointerId)) orig.call(this, pointerId)
+      } catch {
+        /* ignore: nothing to release */
+      }
+    }
+    proto.__ysaPointerPatched = true
+  }, [])
+}
 
 /**
  * One cache for the whole app, persisted in localStorage: reopening the PWA
@@ -11,6 +34,7 @@ import { useState, type ReactNode } from "react"
  * background refetch bring them up to date.
  */
 export function QueryProvider({ userId, children }: { userId: string; children: ReactNode }) {
+  usePointerCaptureGuard()
   const [client] = useState(
     () =>
       new QueryClient({
