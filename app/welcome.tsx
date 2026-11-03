@@ -1,66 +1,64 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { CalendarDays, MessageCircle, Moon, Sun, Users } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useTheme } from "@/lib/theme/context"
 
-const FEATURES = [
-  { icon: MessageCircle, label: "Mesajlar" },
-  { icon: CalendarDays, label: "Takvim" },
-  { icon: Users, label: "Rehber" },
-]
+/** Exact teal of the logo artwork */
+const BRAND = "#67A2B2"
 
-const rise = (delay: number) => ({ initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { delay, duration: 0.45, ease: "easeOut" as const } })
+const rise = (delay: number) => ({
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay, duration: 0.5, ease: "easeOut" as const },
+})
 
-/** First screen for signed-out visitors: Giriş yap / Kayıt ol. */
+/**
+ * First screen for signed-out visitors. The page is the same pure white as the
+ * logo artwork (in light and dark mode) so the logo sits on it seamlessly.
+ */
 export function Welcome() {
-  const { theme, toggle } = useTheme()
   return (
-    <main className="relative flex min-h-dvh flex-col overflow-hidden bg-background px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
-      {/* soft background glow in the brand colour */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 size-[28rem] -translate-x-1/2 rounded-full bg-primary/15 blur-[90px]" />
-      <div className="pointer-events-none absolute -bottom-40 -right-24 size-80 rounded-full bg-sky-400/10 blur-[80px]" />
-
-      <div className="relative flex justify-end">
-        <button onClick={toggle} aria-label="Tema" className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground">
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </button>
-      </div>
-
-      <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
-        <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }} className="relative">
-          <div className="absolute inset-0 scale-125 rounded-[28px] bg-primary/25 blur-2xl" />
-          <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="relative rounded-[26px] bg-white p-3.5 shadow-2xl shadow-primary/20">
-            <Image src="/youthstation-logo.jpg" alt="YouthStation" width={104} height={104} priority className="block object-contain" />
+    <main
+      className="flex min-h-dvh flex-col items-center bg-white px-8 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]"
+      style={{ colorScheme: "light" }}
+    >
+      <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 180, damping: 18 }}
+          className="w-full"
+        >
+          <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}>
+            <Image src="/youthstation-logo.jpg" alt="YouthStation" width={640} height={640} priority className="mx-auto h-auto w-full max-w-[20rem]" />
           </motion.div>
         </motion.div>
 
-        <motion.h1 {...rise(0.15)} className="mt-7 font-heading text-[2rem] font-bold tracking-tight text-foreground">
-          Youth<span className="text-primary">Station</span>
-        </motion.h1>
-        <motion.p {...rise(0.25)} className="mt-2 max-w-xs text-[15px] text-muted-foreground text-pretty">
-          Gençlik topluluğunun uygulaması. İletişim, organizasyon ve dayanışma tek bir yerde.
-        </motion.p>
-
-        <motion.div {...rise(0.35)} className="mt-7 flex gap-2">
-          {FEATURES.map((f) => (
-            <span key={f.label} className="flex items-center gap-1.5 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-semibold text-foreground backdrop-blur">
-              <f.icon className="size-3.5 text-primary" /> {f.label}
-            </span>
-          ))}
+        <motion.div {...rise(0.3)} className="-mt-14 flex flex-col items-center gap-3 text-center">
+          <span className="h-[3px] w-10 rounded-full" style={{ backgroundColor: BRAND, opacity: 0.35 }} />
+          <p className="max-w-[20rem] text-[15px] leading-relaxed text-slate-500 text-pretty">
+            Gençlik topluluğumuzun buluşma noktası
+          </p>
         </motion.div>
       </div>
 
-      <motion.div {...rise(0.45)} className="relative mx-auto flex w-full max-w-sm flex-col gap-3">
-        <Link href="/auth/login" className="flex h-12 items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-[0.98]">
+      <motion.div {...rise(0.5)} className="flex w-full max-w-sm flex-col gap-3">
+        <Link
+          href="/auth/login"
+          className="flex h-[52px] items-center justify-center rounded-2xl text-base font-semibold text-white transition-transform active:scale-[0.98]"
+          style={{ backgroundColor: BRAND, boxShadow: `0 10px 24px -10px ${BRAND}` }}
+        >
           Giriş yap
         </Link>
-        <Link href="/auth/sign-up" className="flex h-12 items-center justify-center rounded-2xl border border-border bg-card text-base font-semibold text-foreground transition-transform active:scale-[0.98]">
+        <Link
+          href="/auth/sign-up"
+          className="flex h-[52px] items-center justify-center rounded-2xl border-2 text-base font-semibold transition-colors active:scale-[0.98]"
+          style={{ borderColor: `${BRAND}55`, color: BRAND }}
+        >
           Kayıt ol
         </Link>
-        <p className="mt-2 text-center text-[11px] text-muted-foreground/70">Sadece üyelere özel erişim</p>
+        <p className="mt-3 text-center text-[11px] tracking-wide text-slate-400">Sadece üyelere özel erişim</p>
       </motion.div>
     </main>
   )

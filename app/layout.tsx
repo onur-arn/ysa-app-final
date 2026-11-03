@@ -35,7 +35,7 @@ export const viewport: Viewport = {
 }
 
 // Applied before hydration to avoid a flash of the wrong theme.
-const themeScript = `(function(){try{var t=localStorage.getItem('ys-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);if(sessionStorage.getItem('ysa-splash'))document.documentElement.classList.add('no-splash');}catch(e){}})();`
+const themeScript = `(function(){try{var t=localStorage.getItem('ys-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.add(t);if(sessionStorage.getItem('ysa-splash')||location.search.indexOf('nosplash')>-1)document.documentElement.classList.add('no-splash');}catch(e){}})();`
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const lang = await getLang()
