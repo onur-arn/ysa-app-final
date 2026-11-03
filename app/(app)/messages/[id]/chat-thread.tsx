@@ -27,7 +27,7 @@ import { ConversationInfo } from "./conversation-info"
 import { MessageBubble } from "./message-bubble"
 
 export function ChatThread({ id }: { id: string }) {
-  const { me } = useApp()
+  const { me, station } = useApp()
   const { t, fmtDate } = useI18n()
   const member = useMemberMap()
   const qc = useQueryClient()
@@ -266,11 +266,21 @@ export function ChatThread({ id }: { id: string }) {
           })
         )}
         {typers.length > 0 && (
-          <div className="mt-3 flex items-end gap-2">
-            {isGroup && <MemberAvatar id={typers[0]} size={28} showOnline={false} />}
-            <span className="flex gap-1 rounded-3xl rounded-bl-lg bg-card px-4 py-3 shadow-sm ring-1 ring-border/60">
-              {[0, 1, 2].map((d) => <span key={d} className="size-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${d * 0.15}s` }} />)}
-            </span>
+          <div className="mt-3 flex flex-col gap-1.5">
+            {typers.map((uid) => {
+              const color = station(member(uid)?.station_id)?.color
+              return (
+                <div key={uid} className="flex items-end gap-2">
+                  {isGroup && <MemberAvatar id={uid} size={28} showOnline={false} />}
+                  <span
+                    className="flex items-center gap-1 rounded-3xl rounded-bl-lg bg-card px-4 py-3 shadow-sm ring-1 ring-border/60"
+                    style={isGroup && color ? { boxShadow: `inset 3px 0 0 hsl(${color})` } : undefined}
+                  >
+                    {[0, 1, 2].map((d) => <span key={d} className="size-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${d * 0.15}s`, backgroundColor: isGroup && color ? `hsl(${color})` : undefined }} />)}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
