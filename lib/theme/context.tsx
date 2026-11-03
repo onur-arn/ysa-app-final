@@ -20,8 +20,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [palette, setPaletteState] = useState<PaletteId>("youthstation")
 
   useEffect(() => {
-    const current = document.documentElement.dataset.palette as PaletteId | undefined
-    if (current && PALETTES.some((p) => p.id === current)) setPaletteState(current)
+    try {
+      const saved = localStorage.getItem(PALETTE_KEY) as PaletteId | null
+      if (saved && PALETTES.some((p) => p.id === saved)) setPaletteState(saved)
+      else if (saved) localStorage.removeItem(PALETTE_KEY) // palette from an older version
+    } catch {}
   }, [])
 
   const setPalette = useCallback((p: PaletteId) => {
@@ -33,6 +36,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return <ThemeContext.Provider value={{ palette, setPalette }}>{children}</ThemeContext.Provider>
+}
+
+/**
+ * Mounted by the (app) layout: the chosen palette only colours the app itself.
+ * Leaving the app (logout → login page) restores the light default.
+ */
+export function PaletteScope() {
+  const { palette } = usePalette()
+  useEffect(() => {
+    document.documentElement.dataset.palette = palette
+    return () => {
+      document.documentElement.dataset.palette = "youthstation"
+    }
+  }, [palette])
+  return null
 }
 
 export function usePalette() {

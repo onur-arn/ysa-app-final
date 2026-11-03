@@ -18,6 +18,7 @@ import { useI18n } from "@/lib/i18n/context"
 import { LEVELS, levelOf, POINT_RULES } from "@/lib/levels"
 import { isIntl } from "@/lib/permissions"
 import { useOnline } from "@/lib/realtime/hub"
+import { useHydrated } from "@/lib/use-hydrated"
 import { createClient } from "@/lib/supabase/client"
 
 export function ageOf(birthday: string | null) {
@@ -32,10 +33,12 @@ export function PointsCard({ userId }: { userId: string }) {
   const { t } = useI18n()
   const member = useMemberMap()
   const m = member(userId)
-  const { data: rank } = useQuery({
+  const hydrated = useHydrated()
+  const { data: cachedRank } = useQuery({
     queryKey: ["rank", userId, m?.points],
     queryFn: async () => (await createClient().rpc("member_rank", { uid: userId })).data?.[0] as { rank: number; total: number } | undefined,
   })
+  const rank = hydrated ? cachedRank : undefined
   const points = m?.points ?? 0
   const lvl = levelOf(points)
   return (

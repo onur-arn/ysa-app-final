@@ -22,12 +22,14 @@ import { createClient } from "@/lib/supabase/client"
 import { PALETTES, usePalette } from "@/lib/theme/context"
 import type { NotifPrefs } from "@/lib/types"
 import { compressImage, uploadMedia } from "@/lib/upload"
+import { useHydrated } from "@/lib/use-hydrated"
 import { cn } from "@/lib/utils"
 
 export function SettingsClient() {
   const { me } = useApp()
   const { t } = useI18n()
   const { palette, setPalette } = usePalette()
+  const hydrated = useHydrated()
   const router = useRouter()
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -161,7 +163,7 @@ export function SettingsClient() {
 
       <SectionTitle><span className="flex items-center gap-1.5"><Bell className="size-3.5" /> {t("settings.notifications")}</span></SectionTitle>
       <Card className="flex flex-col gap-2">
-        {pushSupported() && <Toggle checked={push} onChange={togglePush} label={<span className="flex items-center gap-2"><BellRing className="size-4 text-primary" /> {t("settings.pushNotif")}</span>} />}
+        {hydrated && pushSupported() && <Toggle checked={push} onChange={togglePush} label={<span className="flex items-center gap-2"><BellRing className="size-4 text-primary" /> {t("settings.pushNotif")}</span>} />}
         {(["messages", "tasks", "events", "members"] as const).map((k) => (
           <Toggle key={k} checked={me.notif_prefs?.[k] ?? true} onChange={(v) => setPref(k, v)} label={t(`settings.pref.${k}`)} />
         ))}

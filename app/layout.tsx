@@ -32,7 +32,7 @@ export const viewport: Viewport = {
 }
 
 // Applies the saved colour palette before the first paint.
-const themeScript = `(function(){var d=document.documentElement;d.dataset.palette='youthstation';try{var p=localStorage.getItem('ys-palette');if(p)d.dataset.palette=p;if(sessionStorage.getItem('ysa-splash')||location.search.indexOf('nosplash')>-1)d.classList.add('no-splash');}catch(e){}})();`
+const themeScript = `(function(){var d=document.documentElement;d.dataset.palette='youthstation';try{var p=localStorage.getItem('ys-palette'),l=location.pathname;if(p&&l!=='/'&&l.indexOf('/auth')!==0&&l.indexOf('/setup')!==0)d.dataset.palette=p;if(sessionStorage.getItem('ysa-splash')||location.search.indexOf('nosplash')>-1)d.classList.add('no-splash');}catch(e){}})();`
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const lang = await getLang()

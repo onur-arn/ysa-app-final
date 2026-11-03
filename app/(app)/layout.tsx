@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell/app-shell"
 import { AppProvider } from "@/components/providers/app-context"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { RealtimeHub } from "@/lib/realtime/hub"
+import { PaletteScope } from "@/lib/theme/context"
 import { requireProfile } from "@/lib/auth"
 import { MEMBER_COLUMNS } from "@/lib/data/fetchers"
 import { createClient } from "@/lib/supabase/server"
@@ -21,6 +22,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <QueryProvider userId={me.id}>
       <AppProvider me={me} stations={(stations.data ?? []) as Station[]} initialMembers={(members.data ?? []) as Member[]}>
         <RealtimeHub>
+          <PaletteScope />
           <AppShell>{children}</AppShell>
         </RealtimeHub>
       </AppProvider>
