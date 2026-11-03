@@ -276,6 +276,11 @@ export function useVoiceRecorder() {
   const secondsRef = useRef(0)
 
   async function start() {
+    // The microphone only exists on secure pages (https or localhost), not on http://192.168.x.x
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      window.alert(window.isSecureContext ? "Bu tarayıcı sesli mesaj kaydını desteklemiyor." : "Sesli mesaj için güvenli bağlantı (https) gerekli.")
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -296,7 +301,7 @@ export function useVoiceRecorder() {
         setSeconds(secondsRef.current)
       }, 1000)
     } catch (err) {
-      console.error("[voice]", err)
+      console.warn("[voice]", err)
       window.alert("Mikrofona erişilemedi. Tarayıcı izinlerini kontrol edin.")
     }
   }

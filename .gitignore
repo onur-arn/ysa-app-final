@@ -8,3 +8,6 @@ out
 .vercel
 supabase/.temp
 .next-check
+
+# certificates from `npm run dev:https`
+certificates/
