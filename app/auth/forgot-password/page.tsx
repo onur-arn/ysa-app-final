@@ -1,12 +1,13 @@
 "use client"
 
 import { Mail, MailCheck } from "lucide-react"
+import Link from "next/link"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
 import { useI18n } from "@/lib/i18n/context"
 import { AuthFrame, IconInput } from "../auth-frame"
 
+/** Step 1: ask for the 6-digit code, e-mailed by the app through Brevo. */
 export default function ForgotPasswordPage() {
   const { t } = useI18n()
   const [email, setEmail] = useState("")
@@ -18,39 +19,38 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await createClient().auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-    })
+    const res = await fetch("/api/password/forgot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }) }).catch(() => null)
     setLoading(false)
-    // Unknown addresses still look like a success, so the form never reveals who is a member;
-    // only real delivery problems are shown.
-    if (error?.status === 429 || error?.code === "over_email_send_rate_limit") return setError(t("auth.forgotRateLimit"))
-    if (error && error.status && error.status >= 500) return setError(t("auth.forgotFailed"))
-    if (error?.code === "email_address_invalid") return setError(t("auth.err.email"))
-    setSent(true)
+    if (res?.ok) return setSent(true)
+    const code = ((await res?.json().catch(() => ({}))) as { error?: string })?.error
+    setError(code === "invalid_email" ? t("auth.err.email") : t("auth.forgotFailed"))
   }
+
+  const resetHref = `/auth/reset-password?email=${encodeURIComponent(email.trim())}`
 
   return (
     <AuthFrame
       title={t("auth.forgotTitle")}
       subtitle={sent ? undefined : t("auth.forgotText")}
       footer={
-        sent ? undefined : (
+        sent ? (
+          <Link href={resetHref} className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">{t("auth.enterCode")}</Link>
+        ) : (
           <>
             {error && <p className="text-center text-sm text-destructive">{error}</p>}
-            <Button type="submit" form="forgot-form" size="lg" loading={loading} className="w-full">{t("auth.sendLink")}</Button>
+            <Button type="submit" form="forgot-form" size="lg" loading={loading} className="w-full">{t("auth.sendCode")}</Button>
           </>
         )
       }
     >
       {sent ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 text-center">
-          <MailCheck className="size-10 text-primary" />
-          <p className="text-sm text-foreground">{t("auth.forgotSent")}</p>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="flex size-16 items-center justify-center rounded-2xl bg-primary/10"><MailCheck className="size-8 text-primary" /></span>
+          <p className="max-w-xs text-sm text-muted-foreground text-pretty">{t("auth.codeSent")}</p>
         </div>
       ) : (
-        <form id="forgot-form" onSubmit={onSubmit} className="flex flex-col gap-4">
-          <IconInput icon={Mail} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.email")} />
+        <form id="forgot-form" onSubmit={onSubmit}>
+          <IconInput icon={Mail} type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="uye@youthstation.org" />
         </form>
       )}
     </AuthFrame>

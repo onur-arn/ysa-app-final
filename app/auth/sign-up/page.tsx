@@ -79,22 +79,24 @@ export default function SignUpPage() {
       setLoading(false)
       return setError("Fotoğraf yüklenemedi, başka bir fotoğraf deneyin.")
     }
-    const { error } = await createClient().auth.signUp({
-      email: f.email.trim(),
-      password: f.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/auth/pending`,
-        data: {
-          first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(), birthday: f.birthday, linkedin: f.linkedin.trim(),
-          station_id: f.station_id, position: f.position || null, igem_trained: f.igem === "evet", igem_date: f.igem === "evet" ? f.igem_date : "",
-          hometown: f.hometown, photo_url: up.url,
-        },
-      },
-    })
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: f.email.trim(), password: f.password, first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(),
+        birthday: f.birthday, linkedin: f.linkedin.trim(), station_id: f.station_id, position: f.position || null,
+        igem_trained: f.igem === "evet", igem_date: f.igem === "evet" ? f.igem_date : "", hometown: f.hometown, photo_url: up.url,
+      }),
+    }).catch(() => null)
     setLoading(false)
-    if (error) return setError(error.message.toLowerCase().includes("registered") ? "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin." : "Bir hata oluştu. Lütfen tekrar deneyin.")
-    // e-mail the secretariat with Kabul et / Reddet buttons (fire and forget)
-    void fetch("/api/signup-notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: f.email.trim() }) }).catch(() => {})
+    if (!res?.ok) {
+      const code = ((await res?.json().catch(() => ({}))) as { error?: string })?.error
+      return setError(
+        code === "email_taken" ? "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin."
+          : code === "position_taken" ? "Seçtiğiniz görev bu istasyonda zaten dolu. Lütfen başka bir görev seçin."
+          : "Bir hata oluştu. Lütfen tekrar deneyin.",
+      )
+    }
     go(1)
   }
 
@@ -273,7 +275,7 @@ function Success({ email }: { email: string }) {
       <div className="mb-5 flex size-20 items-center justify-center rounded-full bg-emerald-500/15"><CheckCircle2 className="size-10 text-emerald-500" /></div>
       <h1 className="font-heading text-2xl font-bold text-foreground">Talebiniz alındı!</h1>
       <p className="mt-3 text-sm text-muted-foreground text-pretty">Kaydınız başarıyla iletildi. Yönetici onayladıktan sonra hesabınız aktif hale gelecektir.</p>
-      <p className="mt-2 text-sm text-muted-foreground text-pretty"><b className="text-foreground">{email}</b> adresine gönderilen onay e-postasını kontrol edin.</p>
+      <p className="mt-2 text-sm text-muted-foreground text-pretty">Onaylandığında <b className="text-foreground">{email}</b> adresine bir e-posta gönderilecek.</p>
       </div>
       <AuthFooter><Link href="/" className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">Ana sayfaya dön</Link></AuthFooter>
     </div>

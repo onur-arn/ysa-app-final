@@ -174,6 +174,18 @@ begin
   perform set_config('ysa.trusted', 'off', true);
 end $$;
 
+-- ── PASSWORD RESET CODES (sent by the app through Brevo) ───────────────────
+-- Server only (RLS on, no policy). The 6-digit code is stored hashed, expires
+-- after 15 minutes and allows 5 attempts.
+create table if not exists password_resets (
+  email      text primary key,
+  code_hash  text not null,
+  expires_at timestamptz not null,
+  attempts   int not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table password_resets enable row level security;
+
 -- ── NOTIFICATIONS (bell + push) ─────────────────────────────────────────────
 create table if not exists notifications (
   id         uuid primary key default gen_random_uuid(),
