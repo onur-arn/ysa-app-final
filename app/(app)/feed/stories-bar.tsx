@@ -183,7 +183,7 @@ export function StoriesBar() {
             <div className="relative h-full w-full max-w-md">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={current.image_url} alt="" className={cn("absolute inset-0 size-full", current.fit_mode === "contain" ? "object-contain" : "object-cover")} />
-              <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <div className="absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/60 to-transparent p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
                 <div className="flex gap-1">
                   {reel.map((s, i) => (
                     <span key={s.id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
@@ -214,10 +214,10 @@ export function StoriesBar() {
                   <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs text-white backdrop-blur"><Music className="size-3 shrink-0" /><span className="truncate">{current.music_label}</span></p>
                 )}
               </div>
-              <button className="absolute inset-y-0 left-0 w-1/3" onClick={() => step(-1)} onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} aria-label="prev" />
-              <button className="absolute inset-y-0 right-0 w-2/3" onClick={() => step(1)} onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} aria-label="next" />
+              <button className="absolute inset-y-0 left-0 z-10 w-1/3" onClick={() => step(-1)} onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} aria-label="prev" />
+              <button className="absolute inset-y-0 right-0 z-10 w-2/3" onClick={() => step(1)} onPointerDown={() => setPaused(true)} onPointerUp={() => setPaused(false)} aria-label="next" />
               {current.author_id !== me.id ? (
-                <button onClick={() => like(current)} className="absolute bottom-8 right-6 flex size-12 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur" aria-label="like"><Heart className="size-6" /></button>
+                <button onClick={() => like(current)} className="absolute bottom-8 right-6 z-20 flex size-12 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur" aria-label="like"><Heart className="size-6" /></button>
               ) : (
                 <button
                   onClick={async () => {
@@ -225,7 +225,7 @@ export function StoriesBar() {
                     const { data } = await createClient().from("story_views").select("user_id, viewed_at, liked").eq("story_id", current.id).neq("user_id", me.id).order("viewed_at", { ascending: false })
                     setViewers(data ?? [])
                   }}
-                  className="absolute bottom-8 left-6 flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur"
+                  className="absolute bottom-8 left-6 z-20 flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur"
                   aria-label={t("story.viewers")}
                 >
                   <Eye className="size-5" /> {t("story.viewers")}
