@@ -2,7 +2,6 @@
 
 import { HomeButton } from "@/components/home-button"
 import type { ReactNode } from "react"
-import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 
 export function AuthFrame({ title, subtitle, children, wide }: { title: string; subtitle?: string; children: ReactNode; wide?: boolean }) {
@@ -11,8 +10,7 @@ export function AuthFrame({ title, subtitle, children, wide }: { title: string; 
       <HomeButton />
       <div className={cn("w-full", wide ? "max-w-md" : "max-w-sm")}>
         <div className="mb-8 flex flex-col items-center text-center">
-          <Logo className="size-16" size={64} />
-          <h1 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted-foreground text-pretty">{subtitle}</p>}
         </div>
         {children}

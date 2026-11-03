@@ -6,7 +6,6 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { HomeButton } from "@/components/home-button"
-import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { BOARD_POSITIONS, EXECUTIVE_POSITIONS, HOMETOWNS } from "@/lib/constants"
 import { createClient } from "@/lib/supabase/client"
@@ -101,9 +100,6 @@ export default function SignUpPage() {
     <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-16">
       <HomeButton />
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center">
-          <Link href="/" aria-label="YouthStation"><Logo size={48} /></Link>
-        </div>
         {step < 4 && (
           <div className="mb-6 flex items-center gap-1.5">
             {[1, 2, 3].map((i) => <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", step >= i ? "bg-primary" : "bg-border")} />)}
