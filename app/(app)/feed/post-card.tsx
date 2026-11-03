@@ -27,7 +27,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const member = useMemberMap()
   const qc = useQueryClient()
   const [menu, setMenu] = useState(false)
-  const [showComments, setShowComments] = useState(!!highlight || post.kind === "igem")
+  const [showComments, setShowComments] = useState(!!highlight)
   const [comment, setComment] = useState("")
   const supabase = createClient()
   const author = member(post.author_id)

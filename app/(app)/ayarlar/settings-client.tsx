@@ -104,7 +104,7 @@ export function SettingsClient() {
   }
 
   async function sendIgem() {
-    const { error } = await supabase.from("posts").insert({ author_id: me.id, station_id: me.station_id, kind: "igem", content: motivation.trim() || t("feed.igemIntro") })
+    const { error } = await supabase.from("posts").insert({ author_id: me.id, station_id: me.station_id, kind: "igem", content: motivation.trim() })
     if (error) return toast(t("common.error"), { error: true })
     setIgem(false)
     setMotivation("")

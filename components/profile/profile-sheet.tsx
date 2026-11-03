@@ -125,7 +125,7 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
     p.phone && { icon: Phone, label: p.phone, href: `tel:${p.phone}` },
     { icon: Mail, label: p.email, href: `mailto:${p.email}` },
     p.linkedin && { icon: Link2, label: "LinkedIn", href: p.linkedin.startsWith("http") ? p.linkedin : `https://${p.linkedin}` },
-    p.birthday && { icon: Cake, label: `${fmtDate(p.birthday, { day: "numeric", month: "long" })}${age ? ` · ${t("profile.age", { n: age })}` : ""}` },
+    p.birthday && { icon: Cake, label: `${fmtDate(p.birthday, { day: "numeric", month: "long", year: "numeric" })}${age ? ` · ${t("profile.age", { n: age })}` : ""}` },
     p.hometown && { icon: MapPin, label: p.hometown },
     p.igem_trained && { icon: GraduationCap, label: `${t("profile.igemTrained")}${p.igem_date ? ` · ${fmtDate(p.igem_date)}` : ""}` },
     { icon: CalendarCheck, label: t("profile.memberSince", { date: fmtDate(p.created_at, { month: "long", year: "numeric" }) }) },

@@ -24,6 +24,31 @@ function occursOn(e: AppEvent, d: Date) {
   return d >= s && d <= end
 }
 
+const DAY = 86_400_000
+const dayIndex = (d: Date) => Math.round(dayStart(d).getTime() / DAY)
+/** "Bir dönem" events: drawn as one continuous bar across the days they cover */
+const isSpan = (e: AppEvent) => !!e.ends_at && dayIndex(new Date(e.ends_at)) > dayIndex(new Date(e.starts_at))
+const MAX_ROWS = 3 // bars + chips visible per day cell; the rest becomes "+n"
+
+type Bar = { e: AppEvent; from: number; to: number; lane: number; head: boolean; tail: boolean }
+
+/** Lays the multi-day events of one week out in lanes so they never overlap. */
+function weekBars(events: AppEvent[], weekStart: Date): Bar[] {
+  const w0 = dayIndex(weekStart)
+  const lanes: number[] = [] // last column used per lane
+  return events
+    .map((e) => ({ e, s: dayIndex(new Date(e.starts_at)) - w0, t: dayIndex(new Date(e.ends_at!)) - w0 }))
+    .filter(({ s, t }) => t >= 0 && s <= 6)
+    .sort((a, b) => a.s - b.s || b.t - a.t)
+    .map(({ e, s, t }) => {
+      const from = Math.max(0, s), to = Math.min(6, t)
+      let lane = lanes.findIndex((end) => end < from)
+      if (lane === -1) lane = lanes.length
+      lanes[lane] = to
+      return { e, from, to, lane, head: s >= 0, tail: t <= 6 }
+    })
+}
+
 export function AgendaClient() {
   const { t, fmtDate, locale } = useI18n()
   const { me, station } = useApp()
@@ -60,6 +85,8 @@ export function AgendaClient() {
     setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1))
   }
 
+  const spans = useMemo(() => visible.filter(isSpan), [visible])
+  const weeks = useMemo(() => Array.from({ length: 6 }, (_, w) => days.slice(w * 7, w * 7 + 7)), [days])
   const onDay = (d: Date) => visible.filter((e) => occursOn(e, d)).sort((a, b) => a.starts_at.localeCompare(b.starts_at))
   const upcoming = visible.filter((e) => new Date(e.ends_at ?? e.starts_at) >= dayStart(new Date()))
   const open = events.find((e) => e.id === openId) ?? null
@@ -108,37 +135,69 @@ export function AgendaClient() {
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.15}
               onDragEnd={(_, info) => Math.abs(info.offset.x) > 70 && go(info.offset.x < 0 ? 1 : -1)}
-              className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6"
+              className="grid min-h-0 flex-1 grid-rows-6"
             >
-              {days.map((d) => {
-                const evs = onDay(d)
-                const inMonth = d.getMonth() === month.getMonth()
-                const today = isSameDay(d, new Date())
+              {weeks.map((week) => {
+                const bars = weekBars(spans, week[0])
                 return (
-                  <button
-                    key={d.toISOString()}
-                    onClick={() => setDay(d)}
-                    className={cn("flex min-h-0 flex-col gap-0.5 overflow-hidden border-b border-r border-border/50 p-0.5 text-left transition-colors hover:bg-secondary/50 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-muted/40")}
-                  >
-                    <span className={cn("mx-auto flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold md:mx-0", today ? "bg-primary text-primary-foreground" : inMonth ? "text-foreground" : "text-muted-foreground/50")}>
-                      {d.getDate()}
-                    </span>
-                    {evs.slice(0, 3).map((e) => {
-                      const color = station(e.station_id)?.color ?? "188 57% 48%"
+                  <div key={week[0].toISOString()} className="relative grid min-h-0 grid-cols-7 border-b border-border/50 last:border-b-0">
+                    {week.map((d, col) => {
+                      const inMonth = d.getMonth() === month.getMonth()
+                      const today = isSameDay(d, new Date())
+                      // lanes taken by bars on this day, then single-day chips below them
+                      const here = bars.filter((x) => x.from <= col && x.to >= col)
+                      const lanesHere = here.length ? Math.max(...here.map((x) => x.lane)) + 1 : 0
+                      const singles = onDay(d).filter((e) => !isSpan(e))
+                      const room = Math.max(0, MAX_ROWS - Math.min(lanesHere, MAX_ROWS))
+                      const hidden = here.filter((x) => x.lane >= MAX_ROWS).length + Math.max(0, singles.length - room)
                       return (
-                        <span
-                          key={e.id}
-                          onClick={(ev) => { ev.stopPropagation(); setOpenId(e.id) }}
-                          className="flex items-center gap-0.5 truncate rounded px-1 py-px text-[9px] font-semibold leading-tight md:text-[11px]"
-                          style={{ backgroundColor: `hsl(${color} / 0.16)`, color: `hsl(${color})` }}
+                        <button
+                          key={d.toISOString()}
+                          onClick={() => setDay(d)}
+                          className={cn("flex min-h-0 flex-col gap-0.5 overflow-hidden border-r border-border/50 p-0.5 text-left transition-colors hover:bg-secondary/50 last:border-r-0", !inMonth && "bg-muted/40")}
                         >
-                          {e.is_private && <Lock className="size-2.5 shrink-0" />}
-                          {!e.locked && <span className="truncate">{e.title}</span>}
-                        </span>
+                          <span className={cn("mx-auto flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold md:mx-0", today ? "bg-primary text-primary-foreground" : inMonth ? "text-foreground" : "text-muted-foreground/50")}>
+                            {d.getDate()}
+                          </span>
+                          {/* reserve the lanes drawn by the bar overlay */}
+                          {Array.from({ length: Math.min(lanesHere, MAX_ROWS) }, (_, i) => <span key={i} className="h-3.5 shrink-0 md:h-4" />)}
+                          {singles.slice(0, room).map((e) => {
+                            const color = station(e.station_id)?.color ?? "188 57% 48%"
+                            return (
+                              <span
+                                key={e.id}
+                                onClick={(ev) => { ev.stopPropagation(); setOpenId(e.id) }}
+                                className="flex h-3.5 shrink-0 items-center gap-0.5 truncate rounded px-1 text-[9px] font-semibold leading-none md:h-4 md:text-[11px]"
+                                style={{ backgroundColor: `hsl(${color} / 0.16)`, color: `hsl(${color})` }}
+                              >
+                                {e.is_private && <Lock className="size-2.5 shrink-0" />}
+                                {!e.locked && <span className="truncate">{e.title}</span>}
+                              </span>
+                            )
+                          })}
+                          {hidden > 0 && <span className="px-1 text-[9px] font-bold leading-none text-muted-foreground">+{hidden}</span>}
+                        </button>
                       )
                     })}
-                    {evs.length > 3 && <span className="px-1 text-[9px] font-bold text-muted-foreground">+{evs.length - 3}</span>}
-                  </button>
+                    {/* dönem bars: one continuous line per event across the week */}
+                    <div className="pointer-events-none absolute inset-x-0 top-[1.625rem] grid grid-cols-7 gap-y-0.5 [grid-auto-rows:0.875rem] md:[grid-auto-rows:1rem]">
+                      {bars.filter((x) => x.lane < MAX_ROWS).map((x) => {
+                        const color = station(x.e.station_id)?.color ?? "188 57% 48%"
+                        return (
+                          <span
+                            key={x.e.id}
+                            onClick={() => setOpenId(x.e.id)}
+                            className={cn("pointer-events-auto flex cursor-pointer items-center gap-0.5 overflow-hidden px-1 text-[9px] font-semibold leading-none text-white md:text-[11px]",
+                              x.head ? "ml-0.5 rounded-l-full" : "", x.tail ? "mr-0.5 rounded-r-full" : "")}
+                            style={{ gridColumn: `${x.from + 1} / ${x.to + 2}`, gridRow: x.lane + 1, backgroundColor: `hsl(${color})` }}
+                          >
+                            {x.e.is_private && <Lock className="size-2.5 shrink-0" />}
+                            {!x.e.locked && <span className="truncate">{x.head || x.from === 0 ? x.e.title : ""}</span>}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
             </motion.div>

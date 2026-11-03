@@ -1,11 +1,11 @@
 /** Grades earned through activity in the app (see POINT_RULES / supabase/schema.sql). */
 export const LEVELS = [
   { min: 0, key: "rookie", emoji: "🌱", color: "150 55% 42%" },
-  { min: 50, key: "talker", emoji: "🤝", color: "199 89% 45%" },
-  { min: 150, key: "active", emoji: "⭐", color: "45 90% 45%" },
-  { min: 400, key: "master", emoji: "🔥", color: "24 90% 52%" },
-  { min: 800, key: "ambassador", emoji: "🏅", color: "280 55% 55%" },
-  { min: 1500, key: "legend", emoji: "👑", color: "350 75% 55%" },
+  { min: 150, key: "talker", emoji: "🤝", color: "199 89% 45%" },
+  { min: 500, key: "active", emoji: "⭐", color: "45 90% 45%" },
+  { min: 1500, key: "master", emoji: "🔥", color: "24 90% 52%" },
+  { min: 3500, key: "ambassador", emoji: "🏅", color: "280 55% 55%" },
+  { min: 7500, key: "legend", emoji: "👑", color: "350 75% 55%" },
 ] as const
 
 /** Mirrors the point triggers in the database */

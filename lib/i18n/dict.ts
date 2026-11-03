@@ -114,7 +114,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "feed.emptyText": ["İlk paylaşımı sen yap!","Sois le premier à publier !","Be the first to post!"],
   "feed.err.empty": ["Metin boş olamaz","Le texte est vide","Text is empty"],
   "feed.igem": ["iGEM Talebi","Demande iGEM","iGEM request"],
-  "feed.igemIntro": ["Üye iGEM programına katılmak istiyor.","Ce membre souhaite participer au programme iGEM.","This member wants to join the iGEM programme."],
+  "feed.igemIntro": ["Bu yönetici bir iGEM düzenlemek istiyor.","Ce yönetici souhaite organiser un iGEM.","This board member wants to organise an iGEM."],
   "feed.newPost": ["Yeni paylaşım","Nouvelle publication","New post"],
   "feed.photo": ["Fotoğraf","Photo","Photo"],
   "feed.pin": ["Sabitle","Épingler","Pin"],
