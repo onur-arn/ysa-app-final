@@ -81,7 +81,7 @@ export const fetchPoll = async (messageId: string) =>
   must(await sb().from("polls").select("*, poll_options(*), poll_votes(option_id, user_id)").eq("message_id", messageId).maybeSingle()) as Poll | null
 
 export const fetchNotifications = async () =>
-  must(await sb().from("notifications").select("*").order("created_at", { ascending: false }).limit(60)) as Notification[]
+  must(await sb().from("notifications").select("*").order("created_at", { ascending: false }).limit(5)) as Notification[]
 
 export const fetchReports = async () =>
   must(await sb().from("reports").select("*").order("created_at", { ascending: false }).limit(200)) as Report[]

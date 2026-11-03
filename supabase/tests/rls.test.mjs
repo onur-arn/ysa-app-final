@@ -192,5 +192,13 @@ await as(ADMIN, `update profiles set status = 'deleted', position = null where i
 check("admin can soft-delete an account", (await q(`select status from profiles where id = '${B}'`))[0].status === "deleted")
 check("a deleted member's name still resolves for others", (await as(C, `select full_name from profiles where id = '${B}'`)).rows.length === 1)
 
+// ── notifications capped at 5 ────────────────────────────────────────────────
+await db.query(`delete from notifications where user_id = '${D}'`)
+for (let i = 1; i <= 7; i++) await db.query(`insert into notifications (user_id, type, title, created_at) values ('${D}', 'task', 'n${i}', now() + ($1 || ' seconds')::interval)`, [i])
+const capped = await q(`select count(*)::int n from notifications where user_id = '${D}'`)
+check("a member keeps at most 5 notifications", capped[0].n === 5)
+const kept = await q(`select title from notifications where user_id = '${D}' order by created_at`)
+check("the 5 kept are the most recent (oldest pushed out)", kept.map((r) => r.title).join() === "n3,n4,n5,n6,n7")
+
 console.log(failed ? `\n${failed} FAILED` : "\nALL PASSED")
 process.exit(failed ? 1 : 0)

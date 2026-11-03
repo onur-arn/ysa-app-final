@@ -859,6 +859,20 @@ end $$;
 drop trigger if exists comments_notify on post_comments;
 create trigger comments_notify after insert on post_comments for each row execute function public.comments_notify();
 
+-- Keep at most 5 notifications per member: a new one pushes the oldest out.
+create or replace function public.cap_notifications() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from notifications n
+   where n.user_id = new.user_id
+     and n.id not in (
+       select id from notifications where user_id = new.user_id order by created_at desc limit 5
+     );
+  return null;
+end $$;
+drop trigger if exists cap_notifications on notifications;
+create trigger cap_notifications after insert on notifications for each row execute function public.cap_notifications();
+
 -- ── POINTS & GRADES ─────────────────────────────────────────────────────────
 -- The more active a member is, the higher they climb:
 --   görev completed +10 · event created +5 · post +3 · story +2 · comment +2
