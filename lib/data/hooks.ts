@@ -39,6 +39,8 @@ export const useConversation = (id: string) => hydrationSafe(useQuery({ queryKey
 export const useMessages = (id: string) => hydrationSafe(useQuery({ queryKey: qk.messages(id), queryFn: () => f.fetchMessages(id), staleTime: 30_000 }), useHydrated())
 export const useMessagePoll = (messageId: string) => hydrationSafe(useQuery({ queryKey: qk.polls(messageId), queryFn: () => f.fetchPoll(messageId) }), useHydrated())
 export const useNotifications = () => hydrationSafe(useQuery({ queryKey: qk.notifications, queryFn: f.fetchNotifications }), useHydrated())
+export const useReports = (enabled: boolean) => hydrationSafe(useQuery({ queryKey: qk.reports, queryFn: f.fetchReports, enabled }), useHydrated())
+export const useModLog = (enabled: boolean) => hydrationSafe(useQuery({ queryKey: qk.modLog, queryFn: f.fetchModLog, enabled }), useHydrated())
 
 export function useUnreadMessages() {
   const { data } = useConversations()

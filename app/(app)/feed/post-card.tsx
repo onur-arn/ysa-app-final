@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
-import { GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
+import { Flag, GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { FileChip } from "@/components/file-chip"
@@ -15,7 +15,8 @@ import { useApp } from "@/components/providers/app-context"
 import { useMemberMap } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isIntl } from "@/lib/permissions"
+import { canModerate, isIntl } from "@/lib/permissions"
+import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
 import type { Poll, Post } from "@/lib/types"
@@ -27,12 +28,14 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const member = useMemberMap()
   const qc = useQueryClient()
   const [menu, setMenu] = useState(false)
+  const [report, setReport] = useState<ReportTarget | null>(null)
   const [showComments, setShowComments] = useState(!!highlight)
   const [comment, setComment] = useState("")
   const supabase = createClient()
   const author = member(post.author_id)
   const liked = post.post_likes.some((l) => l.user_id === me.id)
-  const canDelete = post.author_id === me.id || isIntl(me)
+  const canDelete = post.author_id === me.id || isIntl(me) || canModerate(me)
+  const canReport = post.author_id !== me.id && post.kind !== "welcome"
 
   /** optimistic edit of this post in the shared feed cache */
   const patch = (fn: (p: Post) => Post | null) =>
@@ -100,7 +103,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
             <span>{fmtRelative(post.created_at)}</span>
           </div>
         </div>
-        {(isIntl(me) || canDelete) && (
+        {(isIntl(me) || canDelete || canReport) && (
           <div className="relative">
             <button onClick={() => setMenu((v) => !v)} className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary" aria-label="menu"><MoreHorizontal className="size-4" /></button>
             <AnimatePresence>
@@ -112,6 +115,9 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
                       <button onClick={togglePin} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm hover:bg-secondary">
                         {post.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />} {post.pinned ? t("feed.unpin") : t("feed.pin")}
                       </button>
+                    )}
+                    {canReport && (
+                      <button onClick={() => { setMenu(false); setReport({ kind: "post", targetId: post.id, label: author?.full_name ?? "" }) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm hover:bg-secondary"><Flag className="size-4" /> {t("report.action")}</button>
                     )}
                     {canDelete && (
                       <button onClick={remove} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-destructive hover:bg-secondary"><Trash2 className="size-4" /> {t("common.delete")}</button>
@@ -177,6 +183,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
           </form>
         </div>
       )}
+      <ReportSheet target={report} onClose={() => setReport(null)} />
     </Card>
   )
 }

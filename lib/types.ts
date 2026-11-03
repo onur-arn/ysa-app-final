@@ -14,7 +14,7 @@ export type Profile = {
   hometown: string | null
   station_id: string | null
   position: string | null
-  app_role: "member" | "admin"
+  app_role: "member" | "admin" | "moderator"
   status: "pending" | "active" | "suspended" | "rejected"
   photo_url: string | null
   igem_trained: boolean
@@ -155,5 +155,26 @@ export type Notification = {
   actor_id: string | null
   count: number
   read_at: string | null
+  created_at: string
+}
+
+export type Report = {
+  id: string
+  reporter_id: string | null
+  kind: "message" | "post" | "comment" | "user" | "event" | "task"
+  target_id: string
+  conversation_id: string | null
+  reason: string | null
+  status: "open" | "resolved" | "dismissed"
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
+export type ModLog = {
+  id: string
+  moderator_id: string | null
+  action: string
+  detail: Record<string, unknown>
   created_at: string
 }

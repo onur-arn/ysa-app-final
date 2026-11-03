@@ -12,4 +12,6 @@ export const qk = {
   messages: (id: string) => ["messages", id] as const,
   polls: (id: string) => ["poll", id] as const,
   notifications: ["notifications"] as const,
+  reports: ["reports"] as const,
+  modLog: ["mod-log"] as const,
 }

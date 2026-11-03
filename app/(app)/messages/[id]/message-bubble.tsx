@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Pin, Trash2 } from "lucide-react"
+import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Pin, Trash2 } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { useRef, useState, type ReactNode } from "react"
@@ -10,6 +10,8 @@ import { FileChip } from "@/components/file-chip"
 import { PollView } from "@/components/poll-view"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useMessagePoll } from "@/lib/data/hooks"
+import { canModerate } from "@/lib/permissions"
+import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import type { Member, Message, Poll } from "@/lib/types"
@@ -71,6 +73,7 @@ export function MessageBubble({
   const member = useMemberMap()
   const { t, fmtDate } = useI18n()
   const [menu, setMenu] = useState(false)
+  const [report, setReport] = useState<ReportTarget | null>(null)
   const press = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mine = m.sender_id === me.id
   const sender = member(m.sender_id)
@@ -153,13 +156,15 @@ export function MessageBubble({
                 <MenuItem icon={CornerUpLeft} onClick={() => { setMenu(false); onReply() }}>{t("messages.reply")}</MenuItem>
                 {m.content && <MenuItem icon={Copy} onClick={() => { setMenu(false); void navigator.clipboard?.writeText(m.content!) }}>{t("messages.copy")}</MenuItem>}
                 {canPin && !m.deleted_at && <MenuItem icon={Pin} onClick={() => { setMenu(false); onPin() }}>{t("messages.pin")}</MenuItem>}
-                {mine && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={() => { setMenu(false); onDelete() }}>{t("common.delete")}</MenuItem>}
+                {!mine && !m.deleted_at && <MenuItem icon={Flag} onClick={() => { setMenu(false); setReport({ kind: "message", targetId: m.id, conversationId: m.conversation_id, label: member(m.sender_id)?.full_name ?? "" }) }}>{t("report.action")}</MenuItem>}
+                {(mine || canModerate(me)) && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={() => { setMenu(false); onDelete() }}>{t("common.delete")}</MenuItem>}
               </motion.div>
             </>
           )}
         </AnimatePresence>
       </div>
       <button onClick={() => setMenu(true)} className="mb-2 hidden text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 md:block" aria-label="menu">⋯</button>
+      <ReportSheet target={report} onClose={() => setReport(null)} />
     </div>
   )
 }

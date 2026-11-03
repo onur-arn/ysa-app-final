@@ -14,7 +14,7 @@ import { fetchMessage, fetchMessages, PAGE } from "@/lib/data/fetchers"
 import { useConversation, useMemberMap, useMessages } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isIntl } from "@/lib/permissions"
+import { canModerate, isIntl } from "@/lib/permissions"
 import { dispatchPush } from "@/lib/push"
 import { useHub, useOnline } from "@/lib/realtime/hub"
 import { createClient } from "@/lib/supabase/client"
@@ -49,6 +49,7 @@ export function ChatThread({ id }: { id: string }) {
   const otherOnline = useOnline(otherId)
   const otherRead = conv?.conversation_members.find((m) => m.user_id === otherId)?.last_read_at
   const memberIds = useMemo(() => conv?.conversation_members.map((m) => m.user_id) ?? [], [conv])
+  const modView = canModerate(me) && !!conv && !memberIds.includes(me.id) // opened read-only from a report
   const typers = typingIn(id).filter((u) => u !== me.id)
   const byId = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages])
 
@@ -61,7 +62,7 @@ export function ChatThread({ id }: { id: string }) {
 
   const last = messages[messages.length - 1]
   useEffect(() => {
-    if (document.visibilityState === "visible" && (!last || last.sender_id !== me.id)) markRead()
+    if (!modView && document.visibilityState === "visible" && (!last || last.sender_id !== me.id)) markRead()
   }, [last?.id, markRead]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const on = () => document.visibilityState === "visible" && markRead()
@@ -263,7 +264,13 @@ export function ChatThread({ id }: { id: string }) {
         </button>
       )}
 
-      <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />
+      {modView ? (
+        <div className="flex items-center gap-2 border-t border-amber-500/30 bg-amber-500/8 px-4 py-3 text-xs text-amber-700">
+          <span>{t("mod.banner")}</span>
+        </div>
+      ) : (
+        <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />
+      )}
 
       {conv && <ConversationInfo open={info} onClose={() => setInfo(false)} conv={conv} onOpenProfile={(uid) => { setInfo(false); setProfile(uid) }} />}
       <ProfileSheet memberId={profile} onClose={() => setProfile(null)} />
