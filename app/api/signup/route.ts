@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { notifyAdminsOfSignup } from "@/lib/server/signups"
 import { createAdminClient } from "@/lib/supabase/server"
+import { limited } from "@/lib/server/rate-limit"
 
 type Body = Record<string, string | boolean | null | undefined>
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "")
@@ -11,6 +12,7 @@ const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0
  * The profile starts "pending" and the secretariat is e-mailed right away.
  */
 export async function POST(req: NextRequest) {
+  const rl = limited(req, "signup", 5, 60 * 60 * 1000); if (rl) return rl
   const b = (await req.json().catch(() => ({}))) as Body
   const email = str(b.email).toLowerCase()
   const password = typeof b.password === "string" ? b.password : ""
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
 
 /** Step 1 check: tells the form right away that an address is already registered. */
 export async function GET(req: NextRequest) {
+  const rl = limited(req, "signup-check", 20, 10 * 60 * 1000); if (rl) return rl
   const email = (req.nextUrl.searchParams.get("email") ?? "").trim().toLowerCase()
   if (!/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ taken: false })
   const { data } = await createAdminClient().from("profiles").select("id").eq("email", email).limit(1)

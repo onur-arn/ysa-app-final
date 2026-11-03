@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { limited } from "@/lib/server/rate-limit"
 
 export async function GET(req: NextRequest) {
+  const rl = limited(req, "deezer-search", 30, 60000); if (rl) return rl
   const q = req.nextUrl.searchParams.get("q")?.trim()
   if (!q) return NextResponse.json({ data: [] })
 

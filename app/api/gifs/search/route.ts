@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { limited } from "@/lib/server/rate-limit"
 
 const GIPHY_KEY = process.env.GIPHY_API_KEY
 const TENOR_KEY = process.env.TENOR_API_KEY
@@ -68,6 +69,7 @@ async function fetchTenor(q: string, limit: number) {
 }
 
 export async function GET(req: NextRequest) {
+  const rl = limited(req, "gifs", 30, 60000); if (rl) return rl
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? ""
   const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? 24), 30)
 

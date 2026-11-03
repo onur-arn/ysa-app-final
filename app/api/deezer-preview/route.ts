@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { limited } from "@/lib/server/rate-limit"
 
 /** Proxy Deezer preview MP3 so playback isn't blocked by hotlink / CORS rules. */
 export async function GET(req: NextRequest) {
+  const rl = limited(req, "deezer-preview", 60, 60000); if (rl) return rl
   const raw = req.nextUrl.searchParams.get("url")?.trim()
   if (!raw) return NextResponse.json({ error: "Missing url" }, { status: 400 })
 
