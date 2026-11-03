@@ -941,16 +941,17 @@ create policy "files write"  on storage.objects for insert to authenticated with
 create policy "files delete" on storage.objects for delete to authenticated using (bucket_id = 'files' and (owner = auth.uid() or public.is_admin()));
 
 -- ── CLEANUP: remove the former "moderator" feature (now handled by admins) ────
--- Safe to run on a database that never had it. Runs after every policy has been
--- recreated above without any reference to these objects.
+-- Safe to run on a database that never had it. Drop the objects that depended on
+-- the old moderator functions FIRST, then the functions themselves.
+drop policy if exists "reports moderate" on reports;           -- old name (now "reports manage")
+drop table if exists public.moderation_log;                   -- also drops its "modlog read" policy
+drop table if exists public.moderator_emails;
 drop function if exists public.moderator_open_conversation(uuid);
 drop function if exists public.log_moderation(text, jsonb);
 drop function if exists public.can_moderate_conversation(uuid);
 drop function if exists public.can_moderate();
 drop function if exists public.is_moderator();
 drop function if exists public.is_moderator_email(text);
-drop table if exists public.moderation_log;
-drop table if exists public.moderator_emails;
 
 -- ── REALTIME ────────────────────────────────────────────────────────────────
 do $$
