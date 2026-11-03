@@ -1,7 +1,6 @@
 "use client"
 
 import { Mail, MailCheck } from "lucide-react"
-import Link from "next/link"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
@@ -47,11 +46,6 @@ export default function ForgotPasswordPage() {
           </Button>
         </form>
       )}
-      <p className="mt-6 text-center text-sm">
-        <Link href="/auth/login" className="font-semibold text-primary">
-          ← {t("auth.backToLogin")}
-        </Link>
-      </p>
     </AuthFrame>
   )
 }
