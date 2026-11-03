@@ -182,7 +182,7 @@ export function AgendaClient() {
                       )
                     })}
                     {/* dönem bars: one continuous line per event across the week */}
-                    <div className="pointer-events-none absolute inset-x-0 top-[1.625rem] grid grid-cols-7 gap-y-0.5 [grid-auto-rows:0.875rem] md:[grid-auto-rows:1rem]">
+                    <div className="pointer-events-none absolute inset-x-0 top-7 grid grid-cols-7 gap-y-0.5 [grid-auto-rows:0.875rem] md:[grid-auto-rows:1rem]">
                       {bars.filter((x) => x.lane < MAX_ROWS).map((x) => {
                         const color = station(x.e.station_id)?.color ?? "188 57% 48%"
                         return (
