@@ -4,6 +4,9 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "localhost"
 
 const nextConfig = {
+  // Dev only: lets a phone on the same Wi-Fi open the dev server (http://192.168.x.x:3000).
+  // Without it Next.js 16 answers 403 to its own JS/CSS chunks and pages render unstyled.
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"],
   // Lets a verification build run next to `next dev` without touching its .next folder.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
