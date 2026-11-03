@@ -1,6 +1,6 @@
 "use client"
 
-import { KeyRound, Lock, Mail } from "lucide-react"
+import { Eye, EyeOff, KeyRound, Lock, Mail } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,12 @@ function ResetForm() {
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [show, setShow] = useState(false)
+  const eye = (
+    <button type="button" tabIndex={-1} onClick={() => setShow((v) => !v)} className="text-muted-foreground hover:text-foreground" aria-label={show ? "Şifreyi gizle" : "Şifreyi göster"}>
+      {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+    </button>
+  )
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -61,8 +67,8 @@ function ResetForm() {
           placeholder="000000"
           className="text-center font-mono text-lg tracking-[0.4em]"
         />
-        <IconInput icon={Lock} type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.newPassword")} />
-        <IconInput icon={Lock} type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t("auth.confirmPassword")} />
+        <IconInput icon={Lock} type={show ? "text" : "password"} required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.newPassword")} right={eye} />
+        <IconInput icon={Lock} type={show ? "text" : "password"} required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t("auth.confirmPassword")} right={eye} />
       </form>
     </AuthFrame>
   )
