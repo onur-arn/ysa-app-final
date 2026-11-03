@@ -55,6 +55,9 @@ create table if not exists profiles (
   approved_at  timestamptz,
   created_at   timestamptz not null default now()
 );
+-- set once the secretariat has been e-mailed about this sign-up (Kabul et / Reddet)
+alter table profiles add column if not exists signup_notified_at timestamptz;
+
 create unique index if not exists profiles_unique_position on profiles(station_id, position)
   where position is not null and status in ('active', 'pending');
 

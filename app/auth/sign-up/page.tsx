@@ -93,6 +93,8 @@ export default function SignUpPage() {
     })
     setLoading(false)
     if (error) return setError(error.message.toLowerCase().includes("registered") ? "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin." : "Bir hata oluştu. Lütfen tekrar deneyin.")
+    // e-mail the secretariat with Kabul et / Reddet buttons (fire and forget)
+    void fetch("/api/signup-notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: f.email.trim() }) }).catch(() => {})
     go(1)
   }
 
