@@ -35,8 +35,9 @@ const CITY_MAP: Record<string, CityEntry> = {
   mugla:           { adj: "Muğlalı",         joke: "Bodrum'dan tatilden dönüp uğradı ⛵" },
   sakarya:         { adj: "Sakaryalı",       joke: "Sakarya Nehri gibi akıp geldi 🌊" },
   zonguldak:       { adj: "Zonguldaklı",     joke: "Maden ocağından çıkıp doğruca geldi ⛏️" },
-  kastamonu:       { adj: "Kastamonulu",     joke: "Sucuğunu yanına alıp geldi 🌭" },
+  kastamonu:       { adj: "Kastamonulu",     joke: "Taşköprü sarımsağını yanına alıp geldi 🧄" },
   afyon:           { adj: "Afyonlu",         joke: "Kaymağını ve sucuğunu getirdi 🥛" },
+  afyonkarahisar:  { adj: "Afyonlu",         joke: "Kaymağını ve sucuğunu getirdi 🥛" },
   tokat:           { adj: "Tokatlı",         joke: "Tokat kebabını paylaşmak için geldi 🔥" },
   amasya:          { adj: "Amasyalı",        joke: "Amasya elmasından bir sepet getirdi 🍎" },
   sinop:           { adj: "Sinoplu",         joke: "Karadeniz'in en kuzeyinden indi 🧭" },
@@ -44,7 +45,6 @@ const CITY_MAP: Record<string, CityEntry> = {
   siirt:           { adj: "Siirtli",         joke: "Siirt büryanını bırakmadan geldi 🍖" },
   bolu:            { adj: "Bolulu",          joke: "Dağ havasından bir nefes alıp geldi 🌬️" },
   edirne:          { adj: "Edirneli",        joke: "Kırkpınar'dan pehlivan gibi geldi 💪" },
-  tekirdağ:        { adj: "Tekirdağlı",      joke: "Köftesini tabağa koyup geldi 🍖" },
   tekirdag:        { adj: "Tekirdağlı",      joke: "Köftesini tabağa koyup geldi 🍖" },
   canakkale:       { adj: "Çanakkaleli",     joke: "Boğaz'dan geçip aramıza katıldı ⚓" },
   giresun:         { adj: "Giresunlu",       joke: "Fındığını toplayıp geldi 🌰" },
@@ -67,7 +67,7 @@ const CITY_MAP: Record<string, CityEntry> = {
   ardahan:         { adj: "Ardahanlı",       joke: "Ardahan soğuğundan kaçıp sıcak selamla geldi ❄️" },
   igdir:           { adj: "Iğdırlı",         joke: "Iğdır kavunundan bir dilim getirdi 🍈" },
   artvin:          { adj: "Artvinli",        joke: "Artvin'in yeşilliğinden selam getirdi 🌿" },
-  gumusane:        { adj: "Gümüşhaneli",     joke: "Gümüşhane pestilini yanına aldı 🍇" },
+  gumushane:       { adj: "Gümüşhaneli",     joke: "Gümüşhane pestilini yanına aldı 🍇" },
   bayburt:         { adj: "Bayburtlu",       joke: "Bayburt'un yaylasından geldi 💨" },
   mus:             { adj: "Muşlu",           joke: "Muş ovasından koşarak geldi 🏃" },
   bitlis:          { adj: "Bitlisli",        joke: "Tarihi kalelerden selam getirdi 🏰" },
@@ -86,16 +86,9 @@ function normalize(s: string) {
 }
 
 export function buildWelcomePost(name: string, memleket: string | null, station: string) {
-  const m = normalize(memleket ?? "")
-
-  let entry: CityEntry | undefined
-  const mNoSpace = m.replace(/\s+/g, "")
-  for (const [key, val] of Object.entries(CITY_MAP)) {
-    if (m.includes(key) || (mNoSpace.length >= 3 && key.includes(mNoSpace))) {
-      entry = val
-      break
-    }
-  }
+  // Exact match only: partial matching turned "Gümüşhane" into "Muş".
+  const key = normalize(memleket ?? "").replace(/\s+/g, "")
+  const entry = Object.hasOwn(CITY_MAP, key) ? CITY_MAP[key] : undefined
 
   const content = entry
     ? `${entry.adj} ${name} Youth Station Uygulamasına giriş yaptı ! ${entry.joke} 👋`
