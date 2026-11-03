@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { MemberAvatar } from "@/components/avatar"
 import { useApp } from "@/components/providers/app-context"
 import { useMembers } from "@/lib/data/hooks"
+import { isDeleted } from "@/lib/members"
 import { useI18n } from "@/lib/i18n/context"
 import { cn } from "@/lib/utils"
 
@@ -32,7 +33,7 @@ export function MemberPicker({
   const list = useMemo(() => {
     const s = q.trim().toLocaleLowerCase("tr")
     return members.filter(
-      (m) => !exclude.includes(m.id) && (!stationFilter || m.station_id === stationFilter) &&
+      (m) => !isDeleted(m) && !exclude.includes(m.id) && (!stationFilter || m.station_id === stationFilter) &&
         (!s || m.full_name.toLocaleLowerCase("tr").includes(s) || (m.position ?? "").toLocaleLowerCase("tr").includes(s)),
     )
   }, [members, q, exclude, stationFilter])

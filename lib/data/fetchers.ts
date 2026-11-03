@@ -10,12 +10,12 @@ function must<T>(res: { data: T | null; error: { message: string } | null }): T 
 }
 
 export const MEMBER_COLUMNS =
-  "id, first_name, last_name, full_name, email, phone, birthday, linkedin, hometown, station_id, position, app_role, photo_url, igem_trained, igem_date, points, last_seen_at, created_at"
+  "id, first_name, last_name, full_name, email, phone, birthday, linkedin, hometown, station_id, position, app_role, status, photo_url, igem_trained, igem_date, points, last_seen_at, created_at"
 
 export const fetchMe = async (id: string) => must(await sb().from("profiles").select("*").eq("id", id).single()) as Profile
 
 export const fetchMembers = async () =>
-  must(await sb().from("profiles").select(MEMBER_COLUMNS).eq("status", "active").order("first_name")) as Member[]
+  must(await sb().from("profiles").select(MEMBER_COLUMNS).in("status", ["active", "deleted"]).order("first_name")) as Member[]
 
 export const POST_SELECT = "*, post_likes(user_id), post_comments(id, author_id, content, created_at), polls(*, poll_options(*), poll_votes(option_id, user_id))"
 

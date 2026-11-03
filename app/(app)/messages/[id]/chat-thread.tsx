@@ -15,6 +15,7 @@ import { useConversation, useMemberMap, useMessages } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { isAdmin, isIntl } from "@/lib/permissions"
+import { deletedClass } from "@/lib/members"
 import { dispatchPush } from "@/lib/push"
 import { useHub, useOnline } from "@/lib/realtime/hub"
 import { createClient } from "@/lib/supabase/client"
@@ -206,7 +207,7 @@ export function ChatThread({ id }: { id: string }) {
             <MemberAvatar id={otherId} size={40} />
           )}
           <span className="min-w-0">
-            <span className="block truncate font-heading text-[15px] font-bold text-foreground">{title}</span>
+            <span className={cn("block truncate font-heading text-[15px] font-bold text-foreground", !isGroup && deletedClass(other))}>{title}</span>
             <span className={cn("block truncate text-xs", typers.length || (!isGroup && otherOnline) ? "font-medium text-primary" : "text-muted-foreground")}>{subtitle}</span>
           </span>
         </button>

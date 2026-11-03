@@ -180,5 +180,10 @@ check("a normal member cannot resolve a report", await fails(C, `select public.r
 await as(ADMIN, `select public.resolve_report('${rep}', 'resolved')`)
 check("resolving the report re-locks the conversation", (await as(ADMIN, `select id from messages where conversation_id = '${conv}'`)).rows.length === 0)
 
+// ── SOFT DELETE (deleted accounts keep their name) ──────────────────────────
+await as(ADMIN, `update profiles set status = 'deleted', position = null where id = '${B}'`)
+check("admin can soft-delete an account", (await q(`select status from profiles where id = '${B}'`))[0].status === "deleted")
+check("a deleted member's name still resolves for others", (await as(C, `select full_name from profiles where id = '${B}'`)).rows.length === 1)
+
 console.log(failed ? `\n${failed} FAILED` : "\nALL PASSED")
 process.exit(failed ? 1 : 0)

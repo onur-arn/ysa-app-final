@@ -27,7 +27,7 @@ export type Profile = {
 }
 
 /** Directory row (every active member, kept in the realtime cache) */
-export type Member = Omit<Profile, "notif_prefs" | "status" | "approved_at">
+export type Member = Omit<Profile, "notif_prefs" | "approved_at">
 
 export type Poll = {
   id: string

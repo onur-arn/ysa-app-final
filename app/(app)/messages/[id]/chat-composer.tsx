@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
+import { isDeleted } from "@/lib/members"
 import { useHub } from "@/lib/realtime/hub"
 import type { Member, Message } from "@/lib/types"
 import { DOC_ACCEPT, MAX_FILE_BYTES } from "@/lib/upload"
@@ -58,7 +59,7 @@ export function ChatComposer({
   const candidates = useMemo(() => {
     if (query === null || !isGroup) return []
     const q = query.toLocaleLowerCase("tr")
-    return memberIds.filter((id) => id !== me.id).map((id) => member(id)).filter((m): m is Member => !!m && m.full_name.toLocaleLowerCase("tr").includes(q)).slice(0, 6)
+    return memberIds.filter((id) => id !== me.id).map((id) => member(id)).filter((m): m is Member => !!m && !isDeleted(m) && m.full_name.toLocaleLowerCase("tr").includes(q)).slice(0, 6)
   }, [query, memberIds, member, me.id, isGroup])
 
   function onChange(value: string) {

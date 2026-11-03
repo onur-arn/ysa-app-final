@@ -45,7 +45,7 @@ create table if not exists profiles (
   station_id   text references stations(id) on delete set null default 'paris',
   position     text,
   app_role     text not null default 'member' check (app_role in ('member', 'admin')),
-  status       text not null default 'pending' check (status in ('pending', 'active', 'suspended', 'rejected')),
+  status       text not null default 'pending' check (status in ('pending', 'active', 'suspended', 'rejected', 'deleted')),
   photo_url    text,
   igem_trained boolean not null default false,
   igem_date    date,
@@ -57,6 +57,11 @@ create table if not exists profiles (
 );
 -- set once the secretariat has been e-mailed about this sign-up (Kabul et / Reddet)
 alter table profiles add column if not exists signup_notified_at timestamptz;
+
+do $$ begin
+  alter table profiles drop constraint if exists profiles_status_check;
+  alter table profiles add constraint profiles_status_check check (status in ('pending', 'active', 'suspended', 'rejected', 'deleted'));
+exception when others then null; end $$;
 
 create unique index if not exists profiles_unique_position on profiles(station_id, position)
   where position is not null and status in ('active', 'pending');
@@ -165,7 +170,7 @@ drop policy if exists "profiles self" on profiles;
 drop policy if exists "profiles intl" on profiles;
 drop policy if exists "profiles admin delete" on profiles;
 create policy "profiles read" on profiles for select to authenticated
-  using (id = auth.uid() or public.is_intl() or (public.is_active() and status = 'active'));
+  using (id = auth.uid() or public.is_intl() or (public.is_active() and status in ('active', 'deleted')));
 create policy "profiles self" on profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 create policy "profiles intl" on profiles for update to authenticated using (public.is_intl()) with check (public.is_intl());
 create policy "profiles admin delete" on profiles for delete to authenticated using (public.is_admin());

@@ -9,6 +9,7 @@ import { Card, Chips, EmptyState, Segmented } from "@/components/ui/misc"
 import { useApp } from "@/components/providers/app-context"
 import { useMembers } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
+import { isDeleted } from "@/lib/members"
 import { levelOf } from "@/lib/levels"
 
 export function DirectoryClient() {
@@ -26,7 +27,7 @@ export function DirectoryClient() {
 
   const list = useMemo(() => {
     const s = q.trim().toLocaleLowerCase("tr")
-    return members.filter((p) => (st === "all" || (st === "guest" ? !p.station_id : p.station_id === st)) && (!s || [p.full_name, p.position, p.hometown, p.station_id].some((x) => x?.toLocaleLowerCase("tr").includes(s))))
+    return members.filter((p) => !isDeleted(p) && (st === "all" || (st === "guest" ? !p.station_id : p.station_id === st)) && (!s || [p.full_name, p.position, p.hometown, p.station_id].some((x) => x?.toLocaleLowerCase("tr").includes(s))))
   }, [members, q, st])
 
   const ranking = [...list].sort((a, b) => b.points - a.points).slice(0, 50)
@@ -50,7 +51,7 @@ export function DirectoryClient() {
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("directory.searchMember")} className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" />
       </div>
-      <Chips value={st} onChange={setSt} options={[{ id: "all", label: t("common.all") }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color })), ...(members.some((m) => !m.station_id) ? [{ id: "guest", label: "Misafir" }] : [])]} />
+      <Chips value={st} onChange={setSt} options={[{ id: "all", label: t("common.all") }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color })), ...(members.some((m) => !m.station_id && !isDeleted(m)) ? [{ id: "guest", label: "Misafir" }] : [])]} />
       <Segmented value={tab} onChange={setTab} layoutId="dir-tab" options={[
         { id: "list", label: <span className="flex items-center gap-1.5"><Users className="size-4" />{t("directory.members")}</span> },
         { id: "ranking", label: <span className="flex items-center gap-1.5"><Trophy className="size-4" />{t("points.ranking")}</span> },

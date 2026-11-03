@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { createAdminClient, createClient } from "@/lib/supabase/server"
 
-/** A member deletes their own account (profile rows cascade from auth.users). */
+/**
+ * A member deletes their own account. We keep the profile (name shown struck-through
+ * everywhere their content remains) but mark it deleted and block any future login.
+ */
 export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,7 +17,9 @@ export async function POST() {
     return NextResponse.json({ error: "last_admin" }, { status: 409 })
   }
 
-  const { error } = await admin.auth.admin.deleteUser(user.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // soft-delete: keep the name, free the görev slot, block login for good
+  await admin.from("profiles").update({ status: "deleted", position: null, last_seen_at: null }).eq("id", user.id)
+  await admin.auth.admin.updateUserById(user.id, { ban_duration: "876000h" })
+  await supabase.auth.signOut()
   return NextResponse.json({ ok: true })
 }

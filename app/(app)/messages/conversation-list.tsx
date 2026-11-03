@@ -12,6 +12,7 @@ import { Field, Input, Sheet } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { useConversations, useMemberMap } from "@/lib/data/hooks"
+import { deletedClass } from "@/lib/members"
 import { useI18n } from "@/lib/i18n/context"
 import { useHub } from "@/lib/realtime/hub"
 import { createClient } from "@/lib/supabase/client"
@@ -89,7 +90,7 @@ export function ConversationList() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className={cn("flex-1 truncate text-[15px] text-foreground", c.unread ? "font-bold" : "font-semibold")}>{titleOf(c)}</p>
+                  <p className={cn("flex-1 truncate text-[15px] text-foreground", c.unread ? "font-bold" : "font-semibold", c.type === "dm" && deletedClass(member(c.other_id)))}>{titleOf(c)}</p>
                   <span className={cn("shrink-0 text-[11px]", c.unread ? "font-semibold text-primary" : "text-muted-foreground")}>{fmtRelative(c.last_message_at)}</span>
                 </div>
                 <div className="flex items-center gap-2">

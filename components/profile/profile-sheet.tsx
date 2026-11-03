@@ -16,6 +16,8 @@ import { useMemberMap } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
 import { LEVELS, levelOf, POINT_RULES } from "@/lib/levels"
 import { isIntl } from "@/lib/permissions"
+import { deletedClass } from "@/lib/members"
+import { cn } from "@/lib/utils"
 import { useOnline } from "@/lib/realtime/hub"
 import { useHydrated } from "@/lib/use-hydrated"
 import { createClient } from "@/lib/supabase/client"
@@ -125,7 +127,7 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
     <Sheet open onClose={onClose} title={t("profile.title")}>
       <div className="flex flex-col items-center gap-2 text-center">
         <Avatar name={p.full_name} photoUrl={p.photo_url} stationId={p.station_id} size={92} online={online} />
-        <h3 className="mt-1 font-heading text-xl font-bold text-foreground">{p.full_name}</h3>
+        <h3 className={cn("mt-1 font-heading text-xl font-bold text-foreground", deletedClass(p))}>{p.full_name}</h3>
         {p.position && <p className="text-sm font-medium text-primary">{p.position}</p>}
         <div className="flex flex-wrap justify-center gap-2">
           <StationBadge id={p.station_id} member />

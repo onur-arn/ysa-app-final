@@ -10,6 +10,7 @@ import { FileChip } from "@/components/file-chip"
 import { PollView } from "@/components/poll-view"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useMessagePoll } from "@/lib/data/hooks"
+import { deletedClass } from "@/lib/members"
 import { isAdmin } from "@/lib/permissions"
 import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { qk } from "@/lib/data/keys"
@@ -106,7 +107,7 @@ export function MessageBubble({
           style={!mine && isGroup ? { boxShadow: `inset 3px 0 0 hsl(${color})` } : undefined}
         >
           {!mine && isGroup && firstOfGroup && (
-            <p className={cn("mb-0.5 text-[12px] font-bold", media && "px-3.5 pt-2")} style={{ color: `hsl(${color})` }}>
+            <p className={cn("mb-0.5 text-[12px] font-bold", media && "px-3.5 pt-2", deletedClass(sender))} style={{ color: `hsl(${color})` }}>
               {sender?.full_name ?? t("common.formerMember")}
               <span className="ml-1.5 text-[10px] font-semibold opacity-70">{station(sender?.station_id)?.short}</span>
             </p>
