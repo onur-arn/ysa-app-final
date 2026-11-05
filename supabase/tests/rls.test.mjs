@@ -202,6 +202,11 @@ check("a member keeps at most 5 notifications", capped[0].n === 5)
 const kept = await q(`select title from notifications where user_id = '${D}' order by created_at`)
 check("the 5 kept are the most recent (oldest pushed out)", kept.map((r) => r.title).join() === "n3,n4,n5,n6,n7")
 
+for (let i = 1; i <= 7; i++) await db.query(`insert into notifications (user_id, type, title, group_key) values ('${D}', 'message', 'chat${i}', 'conv:${i}')`)
+const afterChat = await q(`select title from notifications where user_id = '${D}' and type <> 'message' order by created_at`)
+check("chat messages never push others out of the bell", afterChat.map((r) => r.title).join() === "n3,n4,n5,n6,n7")
+check("chat entries are kept for push", (await q(`select id from notifications where user_id = '${D}' and type = 'message'`)).length === 7)
+
 // ── BLOCKING (App Store guideline 1.2) ──────────────────────────────────────
 {
 const E = id(6), F = id(7)

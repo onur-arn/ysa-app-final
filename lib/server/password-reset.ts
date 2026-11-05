@@ -5,11 +5,10 @@ import { esc, mailConfigured, sendMail } from "./mailer"
 
 const TTL_MS = 15 * 60_000
 const MAX_ATTEMPTS = 5
-const SITE = () => process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000"
 const hash = (email: string, code: string) => createHash("sha256").update(`${email}:${code}:${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`).digest("hex")
 const norm = (email: string) => email.trim().toLowerCase()
 
-/** Sends the 6-digit code (+ one-tap link) through Brevo, as in ysa-application. Silent for unknown e-mails. */
+/** Sends the 6-digit code through Brevo, as in ysa-application. Silent for unknown e-mails. */
 export async function requestPasswordReset(rawEmail: string): Promise<"sent" | "unknown" | "not_configured"> {
   if (!mailConfigured()) return "not_configured"
   const email = norm(rawEmail)
@@ -19,7 +18,6 @@ export async function requestPasswordReset(rawEmail: string): Promise<"sent" | "
 
   const code = randomInt(100000, 1000000).toString()
   await admin.from("password_resets").upsert({ email, code_hash: hash(email, code), expires_at: new Date(Date.now() + TTL_MS).toISOString(), attempts: 0 })
-  const link = `${SITE()}/auth/reset-password?email=${encodeURIComponent(email)}&code=${code}`
 
   await sendMail({
     to: email,
@@ -33,8 +31,7 @@ export async function requestPasswordReset(rawEmail: string): Promise<"sent" | "
           <span style="font-size:30px;font-weight:700;letter-spacing:0.2em;color:#111827;font-family:monospace">${code}</span>
         </div>
         <p style="color:#6b7280;font-size:13px;margin:0 0 24px">Bu kod <strong>15 dakika</strong> geçerlidir.</p>
-        <a href="${link}" style="display:inline-block;background:#67A2B2;color:#fff;text-decoration:none;padding:14px 30px;border-radius:10px;font-weight:600;font-size:15px">Şifremi sıfırla →</a>
-        <p style="color:#9ca3af;font-size:12px;margin:24px 0 0">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayın; şifreniz değişmez.</p>
+        <p style="color:#9ca3af;font-size:12px;margin:0">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayın; şifreniz değişmez.</p>
       </div>`,
   })
   return "sent"
