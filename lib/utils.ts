@@ -67,3 +67,7 @@ export function downloadCsv(filename: string, rows: (string | number | null | un
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/** Only paths inside this site: "//host" and "/\\host" would leave it, and browsers treat them as external. */
+export const safeNextPath = (next: string | null | undefined, fallback = "/feed") =>
+  next && /^\/(?![/\\])/.test(next) ? next : fallback

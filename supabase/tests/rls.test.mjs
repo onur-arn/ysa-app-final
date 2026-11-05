@@ -207,6 +207,36 @@ const afterChat = await q(`select title from notifications where user_id = '${D}
 check("chat messages never push others out of the bell", afterChat.map((r) => r.title).join() === "n3,n4,n5,n6,n7")
 check("chat entries are kept for push", (await q(`select id from notifications where user_id = '${D}' and type = 'message'`)).length === 7)
 
+// ── SECURITY REVIEW ──────────────────────────────────────────────────────────
+{
+  const P = id(8), M = id(9)
+  await db.query(`insert into auth.users values ($1, $2, $3)`, [P, "attente@x.org", JSON.stringify({ first_name: "Pelin", last_name: "Attente", station_id: "lyon" })])
+  await db.query(`insert into auth.users values ($1, $2, $3)`, [M, "mert@x.org", JSON.stringify({ first_name: "Mete", last_name: "Membre", station_id: "lyon" })])
+  await as(ADMIN, `update profiles set status = 'active' where id = '${M}'`)
+  await as(P, `update profiles set station_id = 'intl' where id = '${P}'`)
+  check("a pending account cannot move itself to intl", (await q(`select station_id from profiles where id = '${P}'`))[0].station_id === "lyon")
+  await as(ADMIN, `update profiles set station_id = 'paris' where id = '${P}'`)
+  check("an admin can still set a pending account's station", (await q(`select station_id from profiles where id = '${P}'`))[0].station_id === "paris")
+  await as(M, `update profiles set email = 'secretaire@youthstation.org' where id = '${M}'`)
+  check("a member cannot take another e-mail on their profile", (await q(`select email from profiles where id = '${M}'`))[0].email === "mert@x.org")
+  await as(M, `update profiles set hometown = 'Adana' where id = '${M}'`)
+  check("a member can still edit their own profile", (await q(`select hometown from profiles where id = '${M}'`))[0].hometown === "Adana")
+  for (const fn of [`add_points('${M}', 5000)`, `recompute_points()`, `wants('${M}', 'tasks')`, `is_vip_email('a@b.c')`])
+    check(`clients cannot call ${fn.split("(")[0]}`, await fails(M, `select public.${fn}`))
+  check("signed-in members can still run the 30-day clean-up", !(await fails(M, `select public.purge_old_posts()`)))
+  const before = (await q(`select points from profiles where id = '${M}'`))[0].points
+  const grp = (await as(ADMIN, `insert into conversations (type, name, created_by) values ('group', 'g', '${ADMIN}') returning id`)).rows[0].id
+  await as(ADMIN, `insert into conversation_members (conversation_id, user_id, is_admin) values ('${grp}', '${ADMIN}', true), ('${grp}', '${M}', false)`)
+  await as(M, `insert into messages (conversation_id, sender_id, content) values ('${grp}', '${M}', 'salut')`)
+  check("points triggers still work", (await q(`select points from profiles where id = '${M}'`))[0].points === before + 1)
+  await as(M, `update conversation_members set is_admin = true where conversation_id = '${grp}' and user_id = '${M}'`)
+  check("a member cannot make themselves group admin", (await q(`select is_admin from conversation_members where conversation_id = '${grp}' and user_id = '${M}'`))[0].is_admin === false)
+  await as(M, `update conversation_members set muted = true where conversation_id = '${grp}' and user_id = '${M}'`)
+  check("a member can still mute a group", (await q(`select muted from conversation_members where conversation_id = '${grp}' and user_id = '${M}'`))[0].muted === true)
+  await as(ADMIN, `update conversation_members set is_admin = true where conversation_id = '${grp}' and user_id = '${M}'`)
+  check("a group admin can still promote a member", (await q(`select is_admin from conversation_members where conversation_id = '${grp}' and user_id = '${M}'`))[0].is_admin === true)
+}
+
 // ── MEDIA BUCKET LISTING ─────────────────────────────────────────────────────
 await db.exec(`grant select on storage.objects to anon`)
 await q(`insert into storage.objects (bucket_id, name) values ('media', 'x/photo.jpg')`)

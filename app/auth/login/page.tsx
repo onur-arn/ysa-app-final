@@ -7,6 +7,7 @@ import { Suspense, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { useI18n } from "@/lib/i18n/context"
+import { safeNextPath } from "@/lib/utils"
 import { AuthFrame, IconInput } from "../auth-frame"
 
 function LoginForm() {
@@ -29,8 +30,7 @@ function LoginForm() {
       setLoading(false)
       return
     }
-    const next = params.get("next")
-    router.replace(next && next.startsWith("/") ? next : "/feed")
+    router.replace(safeNextPath(params.get("next")))
     router.refresh()
   }
 

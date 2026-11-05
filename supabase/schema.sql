@@ -171,11 +171,13 @@ begin
   if auth.uid() is null or public.is_admin() or current_setting('ysa.trusted', true) = 'on' then return new; end if;
   new.points := old.points;
   new.app_role := old.app_role;
+  new.email := old.email;   -- the address password resets go to: never editable from the app
   if not public.is_intl() or new.id = auth.uid() then
     new.status := old.status;
     new.approved_at := old.approved_at;
   end if;
-  if old.status = 'active' and not public.is_intl() then
+  -- pending accounts too: picking 'intl' before approval would grant its powers once approved
+  if not public.is_intl() then
     new.station_id := old.station_id;
     new.position := old.position;
   end if;
@@ -649,6 +651,19 @@ create policy "cm insert" on conversation_members for insert to authenticated wi
 );
 create policy "cm update self"  on conversation_members for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "cm update admin" on conversation_members for update to authenticated using (public.is_conv_admin(conversation_id));
+
+-- "cm update self" exists for muted/last_read_at: only a group admin may grant admin.
+create or replace function public.guard_conv_admin() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null and new.is_admin is distinct from old.is_admin
+     and not public.is_conv_admin(old.conversation_id) and not public.is_admin() then
+    new.is_admin := old.is_admin;
+  end if;
+  return new;
+end $$;
+drop trigger if exists guard_conv_admin on conversation_members;
+create trigger guard_conv_admin before update on conversation_members for each row execute function public.guard_conv_admin();
 create policy "cm delete" on conversation_members for delete to authenticated using (user_id = auth.uid() or public.is_conv_admin(conversation_id));
 
 -- True when the two people of a direct conversation have blocked each other, either way.
@@ -1072,3 +1087,13 @@ end $$;
 
 -- Keep scores consistent with the data every time this script runs.
 select public.recompute_points();
+
+-- Internal helpers: PostgREST exposes every public function, so close these to clients.
+-- Triggers still reach them: they run as the owner (security definer).
+revoke execute on function public.add_points(uuid, int) from public, anon, authenticated;
+revoke execute on function public.recompute_points() from public, anon, authenticated;
+revoke execute on function public.wants(uuid, text) from public, anon, authenticated;
+revoke execute on function public.is_vip_email(text) from public, anon, authenticated;
+-- The app runs the 30-day clean-up for signed-in members; visitors have no reason to.
+revoke execute on function public.purge_old_posts() from public, anon;
+grant execute on function public.purge_old_posts() to authenticated;
