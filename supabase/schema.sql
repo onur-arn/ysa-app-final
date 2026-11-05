@@ -67,6 +67,31 @@ create unique index if not exists profiles_unique_position on profiles(station_i
   where position is not null and status in ('active', 'pending');
 
 -- ── HELPERS (security definer → no RLS recursion) ──────────────────────────
+-- ── BLOCAGES (App Store guideline 1.2) ───────────────────────────────────────
+-- A member can block another one: the blocked person's posts, comments, stories and
+-- messages disappear for them (enforced by RLS, so realtime follows), they stop being
+-- notified by that person, and direct messages are closed both ways.
+create table if not exists user_blocks (
+  blocker_id uuid not null references profiles(id) on delete cascade,
+  blocked_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+create index if not exists user_blocks_blocked_idx on user_blocks(blocked_id);
+alter table user_blocks enable row level security;
+drop policy if exists "blocks read" on user_blocks;
+drop policy if exists "blocks insert" on user_blocks;
+drop policy if exists "blocks delete" on user_blocks;
+create policy "blocks read"   on user_blocks for select to authenticated using (blocker_id = auth.uid());
+create policy "blocks insert" on user_blocks for insert to authenticated with check (blocker_id = auth.uid());
+create policy "blocks delete" on user_blocks for delete to authenticated using (blocker_id = auth.uid());
+
+create or replace function public.has_blocked(author uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists(select 1 from user_blocks where blocker_id = auth.uid() and blocked_id = author)
+$$;
+
 create or replace function public.is_active() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists(select 1 from profiles where id = auth.uid() and status = 'active')
@@ -247,6 +272,16 @@ alter table push_subscriptions enable row level security;
 drop policy if exists "push own" on push_subscriptions;
 create policy "push own" on push_subscriptions for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+-- iOS app: APNs device tokens. Only the server touches them (service role), so a phone
+-- handed to another member moves to that member instead of notifying both.
+create table if not exists device_tokens (
+  token      text primary key,
+  user_id    uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index if not exists device_tokens_user_idx on device_tokens(user_id);
+alter table device_tokens enable row level security;
+
 -- ── FEED ────────────────────────────────────────────────────────────────────
 create table if not exists posts (
   id          uuid primary key default gen_random_uuid(),
@@ -283,7 +318,7 @@ drop policy if exists "posts read" on posts;
 drop policy if exists "posts insert" on posts;
 drop policy if exists "posts update" on posts;
 drop policy if exists "posts delete" on posts;
-create policy "posts read"   on posts for select to authenticated using (public.is_active());
+create policy "posts read"   on posts for select to authenticated using (public.is_active() and not public.has_blocked(author_id));
 create policy "posts insert" on posts for insert to authenticated
   with check (author_id = auth.uid() and public.is_active() and not public.is_guest() and kind in ('post', 'igem') and (not pinned or public.is_intl()));
 create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl());
@@ -324,7 +359,7 @@ create policy "likes own"  on post_likes for all to authenticated using (user_id
 drop policy if exists "pcomments read" on post_comments;
 drop policy if exists "pcomments insert" on post_comments;
 drop policy if exists "pcomments delete" on post_comments;
-create policy "pcomments read"   on post_comments for select to authenticated using (public.is_active());
+create policy "pcomments read"   on post_comments for select to authenticated using (public.is_active() and not public.has_blocked(author_id));
 create policy "pcomments insert" on post_comments for insert to authenticated with check (author_id = auth.uid() and public.is_active());
 create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_intl());
 
@@ -352,7 +387,7 @@ alter table story_views enable row level security;
 drop policy if exists "stories read" on stories;
 drop policy if exists "stories insert" on stories;
 drop policy if exists "stories delete" on stories;
-create policy "stories read"   on stories for select to authenticated using (public.is_active() and expires_at > now());
+create policy "stories read"   on stories for select to authenticated using (public.is_active() and expires_at > now() and not public.has_blocked(author_id));
 create policy "stories insert" on stories for insert to authenticated with check (author_id = auth.uid() and public.is_active() and not public.is_guest());
 create policy "stories delete" on stories for delete to authenticated using (author_id = auth.uid() or public.is_admin());
 drop policy if exists "sviews read" on story_views;
@@ -450,7 +485,7 @@ drop policy if exists "tcomments read" on task_comments;
 drop policy if exists "tcomments insert" on task_comments;
 drop policy if exists "tcomments delete" on task_comments;
 create policy "tcomments read" on task_comments for select to authenticated
-  using (exists(select 1 from tasks t where t.id = task_id and public.can_see_task(t.station_id, t.assignee_id, t.created_by)));
+  using (not public.has_blocked(author_id) and exists(select 1 from tasks t where t.id = task_id and public.can_see_task(t.station_id, t.assignee_id, t.created_by)));
 create policy "tcomments insert" on task_comments for insert to authenticated
   with check (author_id = auth.uid() and exists(select 1 from tasks t where t.id = task_id and public.can_see_task(t.station_id, t.assignee_id, t.created_by)));
 create policy "tcomments delete" on task_comments for delete to authenticated using (author_id = auth.uid() or public.is_admin());
@@ -616,11 +651,22 @@ create policy "cm update self"  on conversation_members for update to authentica
 create policy "cm update admin" on conversation_members for update to authenticated using (public.is_conv_admin(conversation_id));
 create policy "cm delete" on conversation_members for delete to authenticated using (user_id = auth.uid() or public.is_conv_admin(conversation_id));
 
+-- True when the two people of a direct conversation have blocked each other, either way.
+create or replace function public.dm_blocked(cid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists(
+    select 1 from conversations c
+      join conversation_members o on o.conversation_id = c.id and o.user_id <> auth.uid()
+      join user_blocks u on (u.blocker_id = auth.uid() and u.blocked_id = o.user_id)
+                         or (u.blocker_id = o.user_id and u.blocked_id = auth.uid())
+     where c.id = cid and c.type = 'dm')
+$$;
+
 drop policy if exists "msg read" on messages;
 drop policy if exists "msg insert" on messages;
 drop policy if exists "msg update" on messages;
-create policy "msg read"   on messages for select to authenticated using (public.is_member_of(conversation_id) or public.can_review_conversation(conversation_id));
-create policy "msg insert" on messages for insert to authenticated with check (sender_id = auth.uid() and public.is_member_of(conversation_id));
+create policy "msg read"   on messages for select to authenticated using ((public.is_member_of(conversation_id) and not public.has_blocked(sender_id)) or public.can_review_conversation(conversation_id));
+create policy "msg insert" on messages for insert to authenticated with check (sender_id = auth.uid() and public.is_member_of(conversation_id) and not public.dm_blocked(conversation_id));
 create policy "msg update" on messages for update to authenticated using (sender_id = auth.uid());
 drop policy if exists "msg delete" on messages;
 create policy "msg delete" on messages for delete to authenticated using (sender_id = auth.uid() or public.is_admin());
@@ -656,6 +702,9 @@ language plpgsql security definer set search_path = public as $$
 declare cid uuid;
 begin
   if not public.is_active() then raise exception 'inactive'; end if;
+  if exists(select 1 from user_blocks where (blocker_id = auth.uid() and blocked_id = other) or (blocker_id = other and blocked_id = auth.uid())) then
+    raise exception 'blocked';
+  end if;
   select c.id into cid from conversations c
    where c.type = 'dm'
      and exists(select 1 from conversation_members m where m.conversation_id = c.id and m.user_id = auth.uid())
@@ -674,7 +723,8 @@ returns table(id uuid, type text, name text, avatar_url text, last_message_at ti
 language sql stable security definer set search_path = public as $$
   select c.id, c.type, c.name, c.avatar_url, c.last_message_at,
          (select count(*) from messages x where x.conversation_id = c.id and x.created_at > me.last_read_at
-            and x.sender_id is distinct from auth.uid() and x.kind <> 'system' and x.deleted_at is null),
+            and x.sender_id is distinct from auth.uid() and x.kind <> 'system' and x.deleted_at is null
+            and not public.has_blocked(x.sender_id)),
          exists(select 1 from messages x where x.conversation_id = c.id and x.created_at > me.last_read_at and auth.uid() = any(x.mentions)),
          me.muted, lm.content, lm.kind, lm.sender_id,
          o.user_id, o.last_read_at
@@ -683,6 +733,7 @@ language sql stable security definer set search_path = public as $$
     left join lateral (select user_id, last_read_at from conversation_members m2
                         where m2.conversation_id = c.id and m2.user_id <> auth.uid() order by joined_at limit 1) o on c.type = 'dm'
     left join lateral (select content, kind, sender_id from messages m where m.conversation_id = c.id and m.deleted_at is null
+                          and not public.has_blocked(m.sender_id)
                         order by created_at desc limit 1) lm on true
    order by c.last_message_at desc
 $$;
@@ -873,6 +924,18 @@ begin
 end $$;
 drop trigger if exists cap_notifications on notifications;
 create trigger cap_notifications after insert on notifications for each row execute function public.cap_notifications();
+
+-- Nobody is notified by someone they blocked.
+create or replace function public.skip_blocked_notification() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.actor_id is not null and exists(select 1 from user_blocks where blocker_id = new.user_id and blocked_id = new.actor_id) then
+    return null;
+  end if;
+  return new;
+end $$;
+drop trigger if exists skip_blocked_notification on notifications;
+create trigger skip_blocked_notification before insert on notifications for each row execute function public.skip_blocked_notification();
 
 -- ── POINTS & GRADES ─────────────────────────────────────────────────────────
 -- The more active a member is, the higher they climb:

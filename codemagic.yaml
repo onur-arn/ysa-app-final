@@ -10,28 +10,29 @@ workflows:
     integrations:
       app_store_connect: YouthStation ASC   # <-- name of the API key you add in Codemagic
     environment:
-      node: 20
+      node: 22   # @capacitor/cli 8 refuses anything older
       xcode: latest
-      cocoapods: default
       ios_signing:
         distribution_type: app_store
         bundle_identifier: org.youthstation.ysa
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"   # Capacitor 8 uses Swift Package Manager: no .xcworkspace
         XCODE_SCHEME: "App"
     scripts:
       - name: Install npm dependencies
         script: npm ci
-      - name: Generate the iOS project
+      - name: Sync the iOS project
+        script: npx cap sync ios
+      - name: Set the build number
         script: |
-          [ -d ios ] || npx cap add ios
-          npx cap sync ios
+          # App Store Connect refuses two uploads with the same build number.
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/" ios/App/App.xcodeproj/project.pbxproj
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Build the IPA
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa

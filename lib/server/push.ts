@@ -1,5 +1,6 @@
 import "server-only"
 import webpush from "web-push"
+import { apnsConfigured, sendApns, type ApnsMessage } from "@/lib/server/apns"
 import { createAdminClient } from "@/lib/supabase/server"
 
 /**
@@ -8,8 +9,9 @@ import { createAdminClient } from "@/lib/supabase/server"
  */
 export async function deliverPendingPush() {
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, SUPABASE_SERVICE_ROLE_KEY } = process.env
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !SUPABASE_SERVICE_ROLE_KEY) return 0
-  webpush.setVapidDetails(VAPID_SUBJECT || "mailto:contact@youthstation.org", VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+  const webPush = !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY)
+  if (!SUPABASE_SERVICE_ROLE_KEY || (!webPush && !apnsConfigured())) return 0
+  if (webPush) webpush.setVapidDetails(VAPID_SUBJECT || "mailto:contact@youthstation.org", VAPID_PUBLIC_KEY!, VAPID_PRIVATE_KEY!)
   const admin = createAdminClient()
   const since = new Date(Date.now() - 10 * 60_000).toISOString()
   const { data: pending } = await admin
@@ -32,8 +34,22 @@ export async function deliverPendingPush() {
   const toSend = pending.filter((n) => ids.has(n.id))
   if (!toSend.length) return 0
 
-  const { data: subs } = await admin.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", [...new Set(toSend.map((n) => n.user_id))])
-  let sent = 0
+  const userIds = [...new Set(toSend.map((n) => n.user_id))]
+  const titleOf = (n: (typeof toSend)[number]) => (n.count > 1 ? `${n.title} (${n.count})` : n.title)
+  const tagOf = (n: (typeof toSend)[number]) => (n.type === "message" ? n.link : n.id)
+
+  const { data: devices } = await admin.from("device_tokens").select("token, user_id").in("user_id", userIds)
+  const native: ApnsMessage[] = toSend.flatMap((n) =>
+    (devices ?? [])
+      .filter((d) => d.user_id === n.user_id)
+      .map((d) => ({ token: d.token, title: titleOf(n), body: n.body, url: n.link ?? "/feed", threadId: tagOf(n) })),
+  )
+  const apns = await sendApns(native)
+  if (apns.dead.length) await admin.from("device_tokens").delete().in("token", apns.dead)
+  if (!webPush) return apns.sent
+
+  const { data: subs } = await admin.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds)
+  let sent = apns.sent
   await Promise.all(
     toSend.flatMap((n) =>
       (subs ?? [])
@@ -42,7 +58,7 @@ export async function deliverPendingPush() {
           try {
             await webpush.sendNotification(
               { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-              JSON.stringify({ title: n.count > 1 ? `${n.title} (${n.count})` : n.title, body: n.body, url: n.link ?? "/feed", tag: n.type === "message" ? n.link : n.id }),
+              JSON.stringify({ title: titleOf(n), body: n.body, url: n.link ?? "/feed", tag: tagOf(n) }),
             )
             sent++
           } catch (e) {

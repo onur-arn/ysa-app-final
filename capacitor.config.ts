@@ -15,7 +15,8 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   ios: {
-    contentInset: "always",
+    // The site already pads itself with env(safe-area-inset-*), as it does as a PWA.
+    contentInset: "never",
   },
 }
 

@@ -1,11 +1,12 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { Cake, CalendarCheck, GraduationCap, Link2, Mail, MapPin, MessageCircle, Phone, Trash2, Trophy } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Ban, Cake, CalendarCheck, Flag, GraduationCap, Link2, Mail, MapPin, MessageCircle, Phone, Trash2, Trophy } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Avatar } from "@/components/avatar"
 import { PhoneButton } from "@/components/phone-actions"
+import { ReportSheet } from "@/components/report-sheet"
 import { StationBadge } from "@/components/station-badge"
 import { Button } from "@/components/ui/button"
 import { Pill, ProgressBar } from "@/components/ui/misc"
@@ -27,6 +28,38 @@ export function ageOf(birthday: string | null) {
   const b = new Date(birthday)
   const n = new Date()
   return n.getFullYear() - b.getFullYear() - (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate()) ? 1 : 0)
+}
+
+/** "Şikayet et" and "Engelle" on someone else's profile (App Store guideline 1.2). */
+function SafetyActions({ userId, name }: { userId: string; name: string }) {
+  const { me } = useApp()
+  const { t } = useI18n()
+  const qc = useQueryClient()
+  const [reporting, setReporting] = useState(false)
+  const { data: blocked = false, refetch } = useQuery({
+    queryKey: ["blocked", userId],
+    queryFn: async () => !!(await createClient().from("user_blocks").select("blocked_id").eq("blocked_id", userId).maybeSingle()).data,
+  })
+
+  async function toggle() {
+    if (!blocked && !confirm(t("block.confirm", { name }))) return
+    const table = createClient().from("user_blocks")
+    const { error } = blocked
+      ? await table.delete().eq("blocker_id", me.id).eq("blocked_id", userId)
+      : await table.insert({ blocker_id: me.id, blocked_id: userId })
+    if (error) return toast(t("common.error"), { error: true })
+    toast(t(blocked ? "block.undone" : "block.done", { name }))
+    await refetch()
+    void qc.invalidateQueries()   // posts, stories and messages all change with a block
+  }
+
+  return (
+    <div className="mt-3 flex gap-2">
+      <Button variant="ghost" className="flex-1 text-muted-foreground" onClick={() => setReporting(true)}><Flag className="size-4" /> {t("report.action")}</Button>
+      <Button variant="ghost" className="flex-1 text-destructive" onClick={toggle}><Ban className="size-4" /> {t(blocked ? "block.undo" : "block.action")}</Button>
+      <ReportSheet target={reporting ? { kind: "user", targetId: userId, label: name } : null} onClose={() => setReporting(false)} />
+    </div>
+  )
 }
 
 /** Points, grade and rank — the grade grows with every message sent. */
@@ -99,7 +132,7 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
     setOpening(true)
     const { data, error } = await createClient().rpc("open_dm", { other: p!.id })
     setOpening(false)
-    if (error) return toast(t("common.error"), { error: true })
+    if (error) return toast(t(error.message === "blocked" ? "block.dm" : "common.error"), { error: true })
     onClose()
     router.push(`/messages/${data}`)
   }
@@ -155,6 +188,8 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
           return r.href ? <a key={i} href={r.href} target={r.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="hover:bg-secondary/50">{inner}</a> : <div key={i}>{inner}</div>
         })}
       </div>
+
+      {p.id !== me.id && <SafetyActions userId={p.id} name={p.full_name} />}
 
       {isIntl(me) && p.id !== me.id && p.app_role !== "admin" && (
         <Button variant="ghost" className="mt-3 w-full text-destructive" onClick={deleteAccount}><Trash2 className="size-4" /> {t("directory.deleteAccount")}</Button>

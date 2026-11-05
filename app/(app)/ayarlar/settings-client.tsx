@@ -17,7 +17,7 @@ import { HOMETOWNS } from "@/lib/constants"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { isAdmin } from "@/lib/permissions"
-import { disablePush, enablePush, pushEnabled, pushSupported } from "@/lib/push"
+import { disablePush, enablePush, pushEnabled, pushSupported, unlinkNativeDevice } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
 import { PALETTES, usePalette } from "@/lib/theme/context"
 import type { NotifPrefs } from "@/lib/types"
@@ -113,6 +113,7 @@ export function SettingsClient() {
   }
 
   async function logout() {
+    await unlinkNativeDevice()
     await supabase.auth.signOut()
     try { localStorage.removeItem("ysa-cache") } catch {}
     router.replace("/auth/login")
@@ -206,6 +207,10 @@ export function SettingsClient() {
       <div className="mb-4 mt-6 flex flex-col items-center gap-1.5 text-center text-[11px] text-muted-foreground/60">
         <p><span className="font-medium text-muted-foreground/80">Onur Arslan</span> tarafından geliştirilmiştir.</p>
         <p>Bilgi için <a href="mailto:secretaire@youthstation.org" className="underline underline-offset-2 hover:text-primary">secretaire@youthstation.org</a></p>
+        <p className="flex gap-3">
+          <Link href="/gizlilik" className="underline underline-offset-2 hover:text-primary">{t("legal.privacy")}</Link>
+          <Link href="/kosullar" className="underline underline-offset-2 hover:text-primary">{t("legal.terms")}</Link>
+        </p>
         <p>{t("settings.version")}</p>
         {/* 🔐 VIP only (secretaire@ / president@): discreet gold lock to the Yönetici panel */}
         {isAdmin(me) && (

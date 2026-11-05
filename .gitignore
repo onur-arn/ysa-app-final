@@ -12,6 +12,10 @@ supabase/.temp
 # certificates from `npm run dev:https`
 certificates/
 
-# Capacitor native project (generated in CI)
-/ios
 /android
+
+# Capacitor: the iOS project is versioned, only its build output is ignored
+ios/App/build
+ios/App/App/public
+ios/DerivedData
+ios/App/output

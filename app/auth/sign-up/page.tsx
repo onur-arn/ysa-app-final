@@ -289,7 +289,7 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
       </select>
       <label className="mb-5 flex items-start gap-3 text-xs text-muted-foreground">
         <input type="checkbox" checked={f.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5 size-4 accent-[var(--primary)]" />
-        <span>Bilgilerimin dernek üyeleri tarafından görülebileceğini ve dernek yönetimi amacıyla işleneceğini kabul ediyorum (KVKK / GDPR).</span>
+        <span>Bilgilerimin dernek üyeleri tarafından görülebileceğini ve dernek yönetimi amacıyla işleneceğini kabul ediyorum (KVKK / GDPR). <a href="/kosullar" className="underline underline-offset-2">Kullanım Koşulları</a>’nı ve <a href="/gizlilik" className="underline underline-offset-2">Gizlilik Politikası</a>’nı okudum: uygunsuz içerik ve taciz kesinlikle kabul edilmez.</span>
       </label>
       <AuthFooter>
         {error && <p className="text-center text-sm text-destructive">{error}</p>}

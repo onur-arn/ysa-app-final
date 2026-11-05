@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
-import { Eye, Heart, Loader2, Music, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react"
+import { Eye, Flag, Heart, Loader2, Music, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Avatar } from "@/components/avatar"
 import { Sheet } from "@/components/ui/sheet"
@@ -13,6 +13,7 @@ import { useMemberMap, useStories } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { isAdmin, isGuest } from "@/lib/permissions"
+import { reportContent } from "@/lib/report"
 import { createClient } from "@/lib/supabase/client"
 import type { Story } from "@/lib/types"
 import { uploadMedia } from "@/lib/upload"
@@ -207,6 +208,19 @@ export function StoriesBar() {
                     {current.music_preview_url && (
                       <button onClick={() => setMuted((v) => !v)} className="flex size-9 items-center justify-center rounded-full hover:bg-white/10" aria-label="sound">
                         {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+                      </button>
+                    )}
+                    {current.author_id !== me.id && (
+                      <button
+                        onClick={async () => {
+                          setPaused(true)
+                          if (confirm(t("report.storyConfirm")) && (await reportContent("user", current.author_id, null, `Hikâye: ${current.image_url}`))) toast(t("report.sent"))
+                          setPaused(false)
+                        }}
+                        className="flex size-9 items-center justify-center rounded-full hover:bg-white/10"
+                        aria-label={t("report.action")}
+                      >
+                        <Flag className="size-4" />
                       </button>
                     )}
                     {(current.author_id === me.id || isAdmin(me)) && (

@@ -202,5 +202,36 @@ check("a member keeps at most 5 notifications", capped[0].n === 5)
 const kept = await q(`select title from notifications where user_id = '${D}' order by created_at`)
 check("the 5 kept are the most recent (oldest pushed out)", kept.map((r) => r.title).join() === "n3,n4,n5,n6,n7")
 
+// ── BLOCKING (App Store guideline 1.2) ──────────────────────────────────────
+{
+const E = id(6), F = id(7)
+for (const [uid, mail, first] of [[E, "ece@x.org", "Ece"], [F, "fatih@x.org", "Fatih"]]) {
+  await db.query(`insert into auth.users values ($1, $2, $3)`, [uid, mail, JSON.stringify({ first_name: first, last_name: "Blok", station_id: "lyon" })])
+  await as(ADMIN, `update profiles set status = 'active' where id = '${uid}'`)
+}
+const dm = (await as(E, `select public.open_dm('${F}') as id`)).rows[0].id
+await as(F, `insert into messages (conversation_id, sender_id, content) values ('${dm}', '${F}', 'avant blocage')`)
+const post = (await q(`insert into posts (author_id, content) values ('${F}', 'post de Fatih') returning id`))[0].id
+await q(`insert into post_comments (post_id, author_id, content) values ('${post}', '${F}', 'commentaire de Fatih')`)
+check("before blocking, the post is visible", (await as(E, `select id from posts where id = '${post}'`)).rows.length === 1)
+check("a member cannot block on behalf of someone else", await fails(E, `insert into user_blocks (blocker_id, blocked_id) values ('${F}', '${E}')`))
+await as(E, `insert into user_blocks (blocker_id, blocked_id) values ('${E}', '${F}')`)
+check("the blocked person's post disappears", (await as(E, `select id from posts where id = '${post}'`)).rows.length === 0)
+check("the blocked person's comment disappears", (await as(E, `select id from post_comments where post_id = '${post}'`)).rows.length === 0)
+check("the blocked person's messages disappear", (await as(E, `select id from messages where conversation_id = '${dm}'`)).rows.length === 0)
+check("the conversation list no longer previews them", (await as(E, `select last_content, unread from public.my_conversations() where id = '${dm}'`)).rows.every((c) => c.last_content === null && Number(c.unread) === 0))
+check("the post stays visible to everyone else", (await as(C, `select id from posts where id = '${post}'`)).rows.length === 1)
+check("the blocked person cannot write to the blocker", await fails(F, `insert into messages (conversation_id, sender_id, content) values ('${dm}', '${F}', 'encore')`))
+check("the blocker cannot write either", await fails(E, `insert into messages (conversation_id, sender_id, content) values ('${dm}', '${E}', 'salut')`))
+check("the blocked person cannot reopen a DM", await fails(F, `select public.open_dm('${E}')`))
+check("the blocked person cannot see who blocked them", (await as(F, `select * from user_blocks`)).rows.length === 0)
+await q(`insert into notifications (user_id, type, title, actor_id) values ('${E}', 'comment', 'bloquee', '${F}')`)
+check("no notification comes from a blocked person", (await q(`select id from notifications where user_id = '${E}' and title = 'bloquee'`)).length === 0)
+await as(E, `delete from user_blocks where blocked_id = '${F}'`)
+check("unblocking brings the content back", (await as(E, `select id from posts where id = '${post}'`)).rows.length === 1)
+check("unblocking reopens messages", !(await fails(F, `insert into messages (conversation_id, sender_id, content) values ('${dm}', '${F}', 'de retour')`)))
+check("device tokens are closed to members", await denied(E, `select * from device_tokens`))
+}
+
 console.log(failed ? `\n${failed} FAILED` : "\nALL PASSED")
 process.exit(failed ? 1 : 0)
