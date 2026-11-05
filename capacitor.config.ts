@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   appName: "YouthStation",
   webDir: "www",
   server: {
-    url: "https://ysa-app-final.vercel.app",
+    url: "https://app.youthstation.org",
     cleartext: false,
   },
   ios: {
