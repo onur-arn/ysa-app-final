@@ -207,6 +207,15 @@ const afterChat = await q(`select title from notifications where user_id = '${D}
 check("chat messages never push others out of the bell", afterChat.map((r) => r.title).join() === "n3,n4,n5,n6,n7")
 check("chat entries are kept for push", (await q(`select id from notifications where user_id = '${D}' and type = 'message'`)).length === 7)
 
+// ── MEDIA BUCKET LISTING ─────────────────────────────────────────────────────
+await db.exec(`grant select on storage.objects to anon`)
+await q(`insert into storage.objects (bucket_id, name) values ('media', 'x/photo.jpg')`)
+await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false); set role anon;`)
+let anonRows = 1
+try { anonRows = (await db.query(`select name from storage.objects where bucket_id = 'media'`)).rows.length } catch { anonRows = 0 } finally { await db.exec("reset role") }
+check("a visitor cannot list the media bucket", anonRows === 0)
+check("an active member can list it", (await as(C, `select name from storage.objects where bucket_id = 'media'`)).rows.length === 1)
+
 // ── BLOCKING (App Store guideline 1.2) ──────────────────────────────────────
 {
 const E = id(6), F = id(7)

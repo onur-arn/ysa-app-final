@@ -1025,7 +1025,9 @@ drop policy if exists "media delete" on storage.objects;
 drop policy if exists "files read" on storage.objects;
 drop policy if exists "files write" on storage.objects;
 drop policy if exists "files delete" on storage.objects;
-create policy "media read"   on storage.objects for select using (bucket_id = 'media');
+-- Files stay reachable through their public URL (public bucket), but only active members
+-- can list the bucket: without this anyone could enumerate members' photos and voice notes.
+create policy "media read"   on storage.objects for select to authenticated using (bucket_id = 'media' and public.is_active());
 create policy "media write"  on storage.objects for insert to authenticated
   with check (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "media delete" on storage.objects for delete to authenticated
