@@ -1,7 +1,7 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
-import { Check, Expand, Loader2, Minimize2, Music, Pause, Play, Search, Trash2, Type, X } from "lucide-react"
+import { Check, Expand, Loader2, Minimize2, Minus, Music, Pause, Play, Plus, Search, Square, Trash2, Type, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -250,14 +250,22 @@ export function StoryEditor({
         <AnimatePresence>
           {editing && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={(e) => { e.stopPropagation(); commitText() }} className="absolute inset-0 flex flex-col bg-black/55 backdrop-blur-[2px]">
-              <div className="flex items-center justify-between p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => setEditing({ ...editing, boxed: !editing.boxed })} className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white">
-                  {editing.boxed ? "Arka plan: açık" : "Arka plan: kapalı"}
-                </button>
-                <button onClick={() => setEditing({ ...editing, font: (editing.font + 1) % FONTS.length })} className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold text-white" style={{ fontFamily: FONTS[editing.font] }}>Aa</button>
-                <button onClick={commitText} className="flex items-center gap-1 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-black"><Check className="size-3.5" /> Tamam</button>
+              {/* same right-hand column as the other tools, and the text stays high: the keyboard covers the lower half */}
+              <div className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <RoundButton onClick={commitText} label="Tamam" active><Check className="size-5" /></RoundButton>
+                <RoundButton onClick={() => setEditing({ ...editing, font: (editing.font + 1) % FONTS.length })} label="Yazı tipi">
+                  <span className="text-base font-bold" style={{ fontFamily: FONTS[editing.font] }}>Aa</span>
+                </RoundButton>
+                <RoundButton onClick={() => setEditing({ ...editing, boxed: !editing.boxed })} label={editing.boxed ? "Arka plan: açık" : "Arka plan: kapalı"} active={editing.boxed}>
+                  <Square className="size-5" />
+                </RoundButton>
+                <RoundButton onClick={() => setEditing({ ...editing, color: COLORS[(COLORS.indexOf(editing.color) + 1) % COLORS.length] })} label="Renk">
+                  <span className="size-6 rounded-full border-2 border-white" style={{ backgroundColor: editing.color }} />
+                </RoundButton>
+                <RoundButton onClick={() => setEditing({ ...editing, size: Math.min(0.16, editing.size + 0.015) })} label="Büyüt"><Plus className="size-5" /></RoundButton>
+                <RoundButton onClick={() => setEditing({ ...editing, size: Math.max(0.03, editing.size - 0.015) })} label="Küçült"><Minus className="size-5" /></RoundButton>
               </div>
-              <div className="flex flex-1 items-center justify-center px-6" onClick={(e) => e.stopPropagation()}>
+              <div className="pl-5 pr-16 pt-[calc(env(safe-area-inset-top)+5rem)]" onClick={(e) => e.stopPropagation()}>
                 <input
                   autoFocus
                   value={editing.text}
@@ -268,16 +276,6 @@ export function StoryEditor({
                   className="w-full bg-transparent text-center font-bold text-white outline-none placeholder:text-white/40"
                   style={{ fontFamily: FONTS[editing.font], color: editing.color, fontSize: Math.min(44, editing.size * frameW) }}
                 />
-              </div>
-              <div className="flex items-center gap-3 px-6" onClick={(e) => e.stopPropagation()}>
-                <span className="text-xs font-bold text-white/70">A</span>
-                <input type="range" min={0.03} max={0.16} step={0.005} value={editing.size} onChange={(e) => setEditing({ ...editing, size: Number(e.target.value) })} className="flex-1 accent-white" aria-label="Boyut" />
-                <span className="text-lg font-bold text-white/70">A</span>
-              </div>
-              <div className="flex justify-center gap-2.5 p-4" onClick={(e) => e.stopPropagation()}>
-                {COLORS.map((c) => (
-                  <button key={c} onClick={() => setEditing({ ...editing, color: c })} aria-label={c} className={cn("size-8 rounded-full border-2 transition-transform", editing.color === c ? "scale-125 border-white" : "border-white/30")} style={{ backgroundColor: c }} />
-                ))}
               </div>
             </motion.div>
           )}

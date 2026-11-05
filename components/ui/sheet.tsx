@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion, useDragControls } from "framer-motion"
 import { X } from "lucide-react"
 import { type ReactNode, useEffect } from "react"
 
@@ -21,6 +21,8 @@ export function Sheet({
   /** Stacking level, for sheets opened above a full-screen overlay. */
   zClass?: string
 }) {
+  const drag = useDragControls()
+
   useEffect(() => {
     if (!open) return
     document.body.style.overflow = "hidden"
@@ -50,9 +52,20 @@ export function Sheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 320 }}
+            // pull down from the header to close; the body keeps scrolling normally
+            drag="y"
+            dragListener={false}
+            dragControls={drag}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.8 }}
+            dragMomentum={false}
+            dragSnapToOrigin
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 90 || info.velocity.y > 500) onClose()
+            }}
             className={cn("fixed inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-2xl md:bottom-auto md:top-1/2 md:max-h-[85dvh] md:-translate-y-1/2 md:rounded-3xl", zClass)}
           >
-            <div className="relative flex items-center justify-between gap-3 px-5 pb-2 pt-5">
+            <div onPointerDown={(e) => drag.start(e)} className="relative flex touch-none items-center justify-between gap-3 px-5 pb-2 pt-5">
               <div className="absolute left-1/2 top-2 h-1.5 w-10 -translate-x-1/2 rounded-full bg-border md:hidden" />
               <h2 className="min-w-0 truncate font-heading text-lg font-bold text-foreground">{title}</h2>
               <button
