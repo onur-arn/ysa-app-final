@@ -70,7 +70,7 @@ export function EventForm({ open, event, defaultDate, onClose }: { open: boolean
     <Sheet open={open} onClose={onClose} title={event ? t("agenda.editEvent") : t("agenda.newEvent")} footer={<Button className="w-full" size="lg" onClick={submit} loading={loading}>{event ? t("common.save") : t("agenda.create")}</Button>}>
       <div className="flex flex-col gap-4">
         <Segmented value={type} onChange={setType} layoutId="ev-type" options={[{ id: "once", label: t("agenda.once") }, { id: "period", label: t("agenda.period") }]} />
-        <Field label={t("agenda.eventTitle")}><Input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder={t("agenda.titlePlaceholder")} autoFocus /></Field>
+        <Field label={t("agenda.eventTitle")}><Input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder={t("agenda.titlePlaceholder")} /></Field>
         {type === "once" ? (
           <div className="grid grid-cols-3 gap-2">
             <Field label={t("agenda.day")}><Input type="date" value={f.day} onChange={(e) => set("day", e.target.value)} className="px-2 text-sm" /></Field>

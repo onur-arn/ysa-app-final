@@ -137,8 +137,8 @@ export function StoriesBar() {
     <>
       <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-3">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={pick} />
-        <button disabled={isGuest(me)} onClick={() => (myStories.length ? setViewer({ station: me.station_id ?? "intl", mine: true, index: 0 }) : fileRef.current?.click())} className="flex w-16 shrink-0 flex-col items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale">
-          <span className={cn("relative rounded-full p-[2.5px]", myStories.length ? "bg-primary" : "bg-transparent")}>
+        <button disabled={isGuest(me)} onClick={() => (myStories.length ? setViewer({ station: me.station_id ?? "intl", mine: true, index: 0 }) : fileRef.current?.click())} className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale">
+          <span className={cn("relative shrink-0 rounded-full p-[2.5px]", myStories.length ? "bg-primary" : "bg-transparent")}>
             <span className={cn("flex size-16 items-center justify-center overflow-hidden rounded-full border-2", myStories.length ? "border-card" : "border-dashed border-primary/50 bg-primary/5")}>
               {me.photo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -165,11 +165,11 @@ export function StoriesBar() {
           const list = byStation.get(st.id) ?? []
           const unseen = list.some((x) => !seen.has(x.id))
           return (
-            <button key={st.id} disabled={!list.length} onClick={() => setViewer({ station: st.id, mine: false, index: 0 })} className="flex w-16 shrink-0 flex-col items-center gap-1.5 disabled:cursor-default">
-              <span className={cn("relative rounded-full p-[2.5px]", list.length ? (unseen ? "bg-gradient-to-tr from-primary via-sky-400 to-emerald-400" : "bg-border") : "bg-transparent")}>
+            <button key={st.id} disabled={!list.length} onClick={() => setViewer({ station: st.id, mine: false, index: 0 })} className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 disabled:cursor-default">
+              <span className={cn("relative shrink-0 rounded-full p-[2.5px]", list.length ? (unseen ? "bg-gradient-to-tr from-primary via-sky-400 to-emerald-400" : "bg-border") : "bg-transparent")}>
                 {list.length ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={list[list.length - 1].image_url} alt={st.city} className="size-16 rounded-full border-2 border-card object-cover" />
+                  <img src={list[list.length - 1].image_url} alt={st.city} className="size-16 max-w-none rounded-full border-2 border-card object-cover" />
                 ) : (
                   <span className="flex size-16 items-center justify-center rounded-full border-2 border-card font-heading text-[11px] font-bold tracking-wide text-white" style={{ backgroundColor: `hsl(${st.color})` }}>{st.short}</span>
                 )}

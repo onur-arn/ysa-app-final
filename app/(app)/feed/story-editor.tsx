@@ -221,20 +221,23 @@ export function StoryEditor({
 
         {/* top bar */}
         {!editing && !dragId && (
-          <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent p-3" onClick={(e) => e.stopPropagation()}>
-            <RoundButton onClick={onCancel} label="Kapat"><X className="size-5" /></RoundButton>
-            <div className="flex gap-2">
+          <>
+            {/* below the status bar: on iPhone the canvas runs under the clock and battery icons */}
+            <div className="absolute left-3 top-[calc(env(safe-area-inset-top)+0.75rem)]" onClick={(e) => e.stopPropagation()}>
+              <RoundButton onClick={onCancel} label="Kapat"><X className="size-5" /></RoundButton>
+            </div>
+            <div className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
               <RoundButton onClick={() => setFit((f) => (f === "cover" ? "contain" : "cover"))} label={fit === "cover" ? "Sığdır" : "Doldur"}>
                 {fit === "cover" ? <Minimize2 className="size-5" /> : <Expand className="size-5" />}
               </RoundButton>
               <RoundButton onClick={() => setMusicOpen(true)} label="Müzik" active={!!music}><Music className="size-5" /></RoundButton>
               <RoundButton onClick={() => newText()} label="Yazı"><Type className="size-5" /></RoundButton>
             </div>
-          </div>
+          </>
         )}
 
         {music && !editing && !dragId && (
-          <button onClick={(e) => { e.stopPropagation(); setMusicOpen(true) }} className="absolute left-1/2 top-16 flex max-w-[80%] -translate-x-1/2 items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
+          <button onClick={(e) => { e.stopPropagation(); setMusicOpen(true) }} className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+0.75rem)] flex max-w-[60%] -translate-x-1/2 items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
             <Music className="size-3.5 shrink-0" /> <span className="truncate">{music.label}</span>
           </button>
         )}
@@ -247,7 +250,7 @@ export function StoryEditor({
         <AnimatePresence>
           {editing && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={(e) => { e.stopPropagation(); commitText() }} className="absolute inset-0 flex flex-col bg-black/55 backdrop-blur-[2px]">
-              <div className="flex items-center justify-between p-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => setEditing({ ...editing, boxed: !editing.boxed })} className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white">
                   {editing.boxed ? "Arka plan: açık" : "Arka plan: kapalı"}
                 </button>
@@ -394,7 +397,7 @@ function MusicSheet({ open, current, onClose, onPick }: { open: boolean; current
               )}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/40" />
-                <input autoFocus value={q} onChange={(e) => search(e.target.value)} placeholder="Şarkı veya sanatçı ara…" className="h-11 w-full rounded-2xl border border-white/15 bg-white/10 pl-9 pr-9 text-sm text-white outline-none placeholder:text-white/35" />
+                <input value={q} onChange={(e) => search(e.target.value)} placeholder="Şarkı veya sanatçı ara…" className="h-11 w-full rounded-2xl border border-white/15 bg-white/10 pl-9 pr-9 text-sm text-white outline-none placeholder:text-white/35" />
                 {loading && <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-white/50" />}
               </div>
               <div className="flex flex-col gap-0.5 overflow-y-auto">

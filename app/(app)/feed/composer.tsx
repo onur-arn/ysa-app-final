@@ -69,7 +69,7 @@ export function Composer({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Sheet open={open} onClose={onClose} title={t("feed.newPost")} footer={<Button className="w-full" size="lg" onClick={submit} loading={loading}>{t("feed.publish")}</Button>}>
       <div className="flex flex-col gap-4">
-        <Textarea autoFocus value={content} onChange={(e) => setContent(e.target.value)} placeholder={t("feed.postPlaceholder")} className="min-h-32" />
+        <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder={t("feed.postPlaceholder")} className="min-h-32" />
         {image && (
           <div className="relative overflow-hidden rounded-2xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}

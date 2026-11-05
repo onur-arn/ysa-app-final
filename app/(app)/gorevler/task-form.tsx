@@ -51,7 +51,7 @@ export function TaskForm({ open, task, onClose }: { open: boolean; task?: Task; 
   return (
     <Sheet open={open} onClose={onClose} title={task ? t("tasks.edit") : t("tasks.newTask")} footer={<Button className="w-full" size="lg" onClick={submit} loading={loading}>{t("common.save")}</Button>}>
       <div className="flex flex-col gap-4">
-        <Field label={t("common.title")}><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={t("tasks.titlePlaceholder")} autoFocus /></Field>
+        <Field label={t("common.title")}><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={t("tasks.titlePlaceholder")} /></Field>
         <Field label={t("tasks.description")}><Textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder={t("tasks.descPlaceholder")} /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("tasks.priorityLabel")}>
