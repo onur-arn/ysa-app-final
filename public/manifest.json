@@ -1,7 +1,7 @@
 {
   "name": "YouthStation",
   "short_name": "YouthStation",
-  "description": "YouthStation — association management",
+  "description": "YouthStation — chat and organization",
   "start_url": "/feed",
   "display": "standalone",
   "background_color": "#f5fafa",

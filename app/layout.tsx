@@ -14,7 +14,7 @@ const plusJakarta = Plus_Jakarta_Sans({ variable: "--font-plus-jakarta", subsets
 
 export const metadata: Metadata = {
   title: { default: "YouthStation", template: "%s · YouthStation" },
-  description: "YouthStation — iletişim, organizasyon ve dernek yönetimi.",
+  description: "YouthStation — iletişim ve organizasyon.",
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "YouthStation" },
   icons: {

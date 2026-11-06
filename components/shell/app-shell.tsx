@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               setBanner(null)
               if (banner.link) router.push(banner.link)
             }}
-            className="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[65] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 text-left shadow-2xl backdrop-blur-xl"
+            className="fixed inset-x-3 top-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] z-[65] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 text-left shadow-2xl backdrop-blur-xl"
           >
             {actor ? <Avatar name={actor.full_name} photoUrl={actor.photo_url} stationId={actor.station_id} size={40} /> : <span className="flex size-10 items-center justify-center rounded-full bg-primary/12 text-primary"><Bell className="size-5" /></span>}
             <span className="min-w-0 flex-1">

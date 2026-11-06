@@ -26,7 +26,7 @@ export function Toaster() {
     return () => window.removeEventListener(EVENT, on)
   }, [])
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-[70] flex flex-col items-center gap-2 px-4">
+    <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] z-[70] flex flex-col items-center gap-2 px-4">
       <AnimatePresence>
         {items.map((i) => (
           <motion.div
