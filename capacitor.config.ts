@@ -19,6 +19,16 @@ const config: CapacitorConfig = {
   plugins: {
     // "native" shrinks the WebView to the space above the keyboard: nothing shows in between.
     Keyboard: { resize: "native", style: "LIGHT" },
+    // Keep the logo launch screen up while the hosted site loads (no blank white page):
+    // the site hides it as soon as it is ready (components/splash-screen.tsx); the
+    // duration is only the safety net if the site never answers.
+    SplashScreen: {
+      launchShowDuration: 10000,
+      launchAutoHide: true,
+      launchFadeOutDuration: 250,
+      backgroundColor: "#ffffff",
+      showSpinner: false,
+    },
   },
   ios: {
     // The site already pads itself with env(safe-area-inset-*), as it does as a PWA.

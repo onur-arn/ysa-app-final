@@ -1,5 +1,7 @@
 "use client"
 
+import { Capacitor } from "@capacitor/core"
+import { SplashScreen as NativeSplash } from "@capacitor/splash-screen"
 import { AnimatePresence, motion } from "framer-motion"
 import Image from "next/image"
 import { useEffect, useState } from "react"
@@ -10,11 +12,20 @@ const KEY = "ysa-splash"
  * Animated YouthStation logo on start-up (v1 design). Shown once per session:
  * the inline script in the root layout adds `.no-splash` before paint when it
  * has already been seen, so refreshes are not slowed down.
+ *
+ * In the iOS app (1.0.1+), the native logo launch screen stays up while the site
+ * loads; it is hidden here, once the page is ready, and this web splash is skipped
+ * (the inline script adds `.no-splash` too) so the start-up is not lengthened.
  */
 export function SplashScreen() {
   const [visible, setVisible] = useState(true)
 
   useEffect(() => {
+    if (Capacitor.isPluginAvailable("SplashScreen")) {
+      setVisible(false)
+      void NativeSplash.hide().catch(() => {})
+      return
+    }
     if (document.documentElement.classList.contains("no-splash")) return setVisible(false)
     try { sessionStorage.setItem(KEY, "1") } catch {}
     const t = setTimeout(() => setVisible(false), 1700)
