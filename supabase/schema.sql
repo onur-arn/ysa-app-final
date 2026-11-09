@@ -172,6 +172,8 @@ begin
   new.points := old.points;
   new.app_role := old.app_role;
   new.email := old.email;   -- the address password resets go to: never editable from the app
+  new.first_name := old.first_name;   -- names are set at sign-up; only admins can correct them
+  new.last_name := old.last_name;
   if not public.is_intl() or new.id = auth.uid() then
     new.status := old.status;
     new.approved_at := old.approved_at;

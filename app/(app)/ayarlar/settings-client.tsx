@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { Avatar } from "@/components/avatar"
+import { PRIVACY_URL, TERMS_URL } from "@/components/legal/legal-page"
 import { PointsCard } from "@/components/profile/profile-sheet"
 import { StationBadge } from "@/components/station-badge"
 import { Button } from "@/components/ui/button"
@@ -34,7 +35,7 @@ export function SettingsClient() {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
-  const [f, setF] = useState({ first_name: me.first_name, last_name: me.last_name, phone: me.phone ?? "", birthday: me.birthday ?? "", hometown: me.hometown ?? "", linkedin: me.linkedin ?? "" })
+  const [f, setF] = useState({ phone: me.phone ?? "", birthday: me.birthday ?? "", hometown: me.hometown ?? "", linkedin: me.linkedin ?? "" })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [pw, setPw] = useState("")
@@ -50,10 +51,9 @@ export function SettingsClient() {
   }
 
   async function save() {
-    if (!f.first_name.trim() || !f.last_name.trim()) return toast(t("auth.err.name"), { error: true })
     setSaving(true)
     const { error } = await supabase.from("profiles").update({
-      first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim() || null, birthday: f.birthday || null,
+      phone: f.phone.trim() || null, birthday: f.birthday || null,
       hometown: f.hometown || null, linkedin: f.linkedin.trim() || null,
     }).eq("id", me.id)
     setSaving(false)
@@ -146,9 +146,9 @@ export function SettingsClient() {
       <SectionTitle><span className="flex items-center gap-1.5"><UserRound className="size-3.5" /> {t("settings.profileInfo")}</span></SectionTitle>
       <Card className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t("profile.firstName")}><Input value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></Field>
-          <Field label={t("profile.lastName")}><Input value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></Field>
-          <Field label={t("profile.phone")} hint={t("settings.phoneHint")}><Input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="+33 6 …" /></Field>
+          <Field label={t("profile.firstName")}><Input value={me.first_name} disabled readOnly /></Field>
+          <Field label={t("profile.lastName")}><Input value={me.last_name} disabled readOnly /></Field>
+          <Field label={t("profile.phone")}><Input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="+33 6 …" /></Field>
           <Field label={t("profile.birthday")}><Input type="date" value={f.birthday} onChange={(e) => setF({ ...f, birthday: e.target.value })} className="px-3" /></Field>
           <Field label={t("profile.hometown")}>
             <Select value={f.hometown} onChange={(e) => setF({ ...f, hometown: e.target.value })}>
@@ -208,8 +208,8 @@ export function SettingsClient() {
         <p><span className="font-medium text-muted-foreground/80">Onur Arslan</span> tarafından geliştirilmiştir.</p>
         <p>Bilgi için <a href="mailto:secretaire@youthstation.org" className="underline underline-offset-2 hover:text-primary">secretaire@youthstation.org</a></p>
         <p className="flex gap-3">
-          <Link href="/gizlilik" className="underline underline-offset-2 hover:text-primary">{t("legal.privacy")}</Link>
-          <Link href="/kosullar" className="underline underline-offset-2 hover:text-primary">{t("legal.terms")}</Link>
+          <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-primary">{t("legal.privacy")}</a>
+          <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-primary">{t("legal.terms")}</a>
         </p>
         <p>{t("settings.version")}</p>
         {/* 🔐 VIP only (secretaire@ / president@): discreet gold lock to the Yönetici panel */}

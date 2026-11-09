@@ -3,6 +3,10 @@ import type { ReactNode } from "react"
 
 export const CONTACT_EMAIL = "secretaire@youthstation.org"
 
+/** Public legal pages, hosted apart from the app (this is the URL given to the App Store). */
+export const PRIVACY_URL = "https://ysa-privacy-policy.vercel.app"
+export const TERMS_URL = "https://ysa-privacy-policy.vercel.app/kosullar"
+
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (
     <main className="mx-auto min-h-dvh max-w-2xl bg-background px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-sm leading-relaxed text-foreground">

@@ -30,7 +30,10 @@ export function ageOf(birthday: string | null) {
   return n.getFullYear() - b.getFullYear() - (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate()) ? 1 : 0)
 }
 
-/** "Şikayet et" and "Engelle" on someone else's profile (App Store guideline 1.2). */
+/**
+ * "Şikayet et" on someone else's profile. Blocking a member is no longer offered;
+ * people who blocked someone before keep an "Engeli kaldır" button to undo it.
+ */
 function SafetyActions({ userId, name }: { userId: string; name: string }) {
   const { me } = useApp()
   const { t } = useI18n()
@@ -41,14 +44,10 @@ function SafetyActions({ userId, name }: { userId: string; name: string }) {
     queryFn: async () => !!(await createClient().from("user_blocks").select("blocked_id").eq("blocked_id", userId).maybeSingle()).data,
   })
 
-  async function toggle() {
-    if (!blocked && !confirm(t("block.confirm", { name }))) return
-    const table = createClient().from("user_blocks")
-    const { error } = blocked
-      ? await table.delete().eq("blocker_id", me.id).eq("blocked_id", userId)
-      : await table.insert({ blocker_id: me.id, blocked_id: userId })
+  async function unblock() {
+    const { error } = await createClient().from("user_blocks").delete().eq("blocker_id", me.id).eq("blocked_id", userId)
     if (error) return toast(t("common.error"), { error: true })
-    toast(t(blocked ? "block.undone" : "block.done", { name }))
+    toast(t("block.undone", { name }))
     await refetch()
     void qc.invalidateQueries()   // posts, stories and messages all change with a block
   }
@@ -56,7 +55,7 @@ function SafetyActions({ userId, name }: { userId: string; name: string }) {
   return (
     <div className="mt-3 flex gap-2">
       <Button variant="ghost" className="flex-1 text-muted-foreground" onClick={() => setReporting(true)}><Flag className="size-4" /> {t("report.action")}</Button>
-      <Button variant="ghost" className="flex-1 text-destructive" onClick={toggle}><Ban className="size-4" /> {t(blocked ? "block.undo" : "block.action")}</Button>
+      {blocked && <Button variant="ghost" className="flex-1 text-destructive" onClick={unblock}><Ban className="size-4" /> {t("block.undo")}</Button>}
       <ReportSheet target={reporting ? { kind: "user", targetId: userId, label: name } : null} onClose={() => setReporting(false)} />
     </div>
   )

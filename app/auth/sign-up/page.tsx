@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { AuthFooter, AuthShell } from "../auth-frame"
 import { Button } from "@/components/ui/button"
+import { PRIVACY_URL, TERMS_URL } from "@/components/legal/legal-page"
 import { BOARD_POSITIONS, EXECUTIVE_POSITIONS, HOMETOWNS } from "@/lib/constants"
 import { createClient } from "@/lib/supabase/client"
 import type { Station } from "@/lib/types"
@@ -289,7 +290,7 @@ function Step3({ f, set, onBack, onSubmit, loading, error }: StepProps & { onBac
       </select>
       <label className="mb-5 flex items-start gap-3 text-xs text-muted-foreground">
         <input type="checkbox" checked={f.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5 size-4 accent-[var(--primary)]" />
-        <span>Bilgilerimin onaylı kullanıcılar tarafından görülebileceğini ve hesabımın yönetimi amacıyla işleneceğini kabul ediyorum (KVKK / GDPR). <a href="/kosullar" className="underline underline-offset-2">Kullanım Koşulları</a>’nı ve <a href="/gizlilik" className="underline underline-offset-2">Gizlilik Politikası</a>’nı okudum: uygunsuz içerik ve taciz kesinlikle kabul edilmez.</span>
+        <span>Bilgilerimin onaylı kullanıcılar tarafından görülebileceğini ve hesabımın yönetimi amacıyla işleneceğini kabul ediyorum (KVKK / GDPR). <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Kullanım Koşulları</a>’nı ve <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Gizlilik Politikası</a>’nı okudum: uygunsuz içerik ve taciz kesinlikle kabul edilmez.</span>
       </label>
       <AuthFooter>
         {error && <p className="text-center text-sm text-destructive">{error}</p>}

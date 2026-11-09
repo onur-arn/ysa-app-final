@@ -72,11 +72,13 @@ export function EventForm({ open, event, defaultDate, onClose }: { open: boolean
         <Segmented value={type} onChange={setType} layoutId="ev-type" options={[{ id: "once", label: t("agenda.once") }, { id: "period", label: t("agenda.period") }]} />
         <Field label={t("agenda.eventTitle")}><Input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder={t("agenda.titlePlaceholder")} /></Field>
         {type === "once" ? (
-          <div className="grid grid-cols-3 gap-2">
-            <Field label={t("agenda.day")}><Input type="date" value={f.day} onChange={(e) => set("day", e.target.value)} className="px-2 text-sm" /></Field>
-            <Field label={t("agenda.time")}><Input type="time" value={f.time} onChange={(e) => set("time", e.target.value)} className="px-2 text-sm" /></Field>
-            <Field label={t("agenda.endTime")}><Input type="time" value={f.endTime} onChange={(e) => set("endTime", e.target.value)} className="px-2 text-sm" /></Field>
-          </div>
+          <>
+            <Field label={t("agenda.day")}><Input type="date" value={f.day} onChange={(e) => set("day", e.target.value)} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t("agenda.time")}><Input type="time" value={f.time} onChange={(e) => set("time", e.target.value)} /></Field>
+              <Field label={t("agenda.endTime")}><Input type="time" value={f.endTime} onChange={(e) => set("endTime", e.target.value)} /></Field>
+            </div>
+          </>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("agenda.start")}><Input type="date" value={f.day} onChange={(e) => set("day", e.target.value)} className="px-3" /></Field>
