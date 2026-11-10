@@ -10,6 +10,12 @@ html, body {
   max-width: 100vw;
 }
 
+/* No long-press menu on links and buttons: in the iOS app it offered "Open in Safari",
+   which left the app for the website. */
+a, a *, button, button *, [role="button"], [role="button"] * {
+  -webkit-touch-callout: none;
+}
+
 /* iOS draws date/time fields as an oversized native pill that ignores the field's
    size and drifts off-centre: strip it and lay the value out like any text field. */
 input[type="date"],

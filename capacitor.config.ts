@@ -33,6 +33,8 @@ const config: CapacitorConfig = {
   ios: {
     // The site already pads itself with env(safe-area-inset-*), as it does as a PWA.
     contentInset: "never",
+    // No link preview on long press: it could open the page in Safari, outside the app.
+    allowsLinkPreview: false,
   },
 }
 
