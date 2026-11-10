@@ -19,8 +19,12 @@ create table if not exists stations (
   short      text not null,
   city       text not null,
   color      text not null default '188 57% 48%',
-  position   int  not null default 0
+  position   int  not null default 0,
+  lat        double precision,   -- map position on the sign-up map
+  lng        double precision
 );
+alter table stations add column if not exists lat double precision;
+alter table stations add column if not exists lng double precision;
 insert into stations (id, name, short, city, color, position) values
   ('intl',       'Uluslararası Büro',    'INT', 'Uluslararası', '188 57% 48%', 0),
   ('paris',      'Paris İstasyonu',      'PAR', 'Paris',        '221 70% 55%', 1),
@@ -211,12 +215,14 @@ end $$;
 drop trigger if exists protect_profile on profiles;
 create trigger protect_profile before update on profiles for each row execute function public.protect_profile();
 
--- The Yürütme Kurulu only exists in Uluslararası Büro: other stations have the Yönetim Kurulu only.
+-- The Yürütme Kurulu, the Eğitim Koordinatörü and the AB Projeler Sorumlusu only exist in
+-- Uluslararası Büro: other stations have the rest of the Yönetim Kurulu only.
 -- Checked only when the station or the position changes, so existing rows stay editable.
 create or replace function public.guard_executive_position() returns trigger
 language plpgsql set search_path = public as $$
 begin
-  if new.position in ('İnovasyon ve Girişimcilik Proje Direktörü', 'Kültür ve Sanat Proje Direktörü', 'Gençlik ve Çevre Proje Direktörü',
+  if new.position in ('Eğitim Koordinatörü', 'Avrupa Birliği Projeler Sorumlusu',
+                      'İnovasyon ve Girişimcilik Proje Direktörü', 'Kültür ve Sanat Proje Direktörü', 'Gençlik ve Çevre Proje Direktörü',
                       'Dezavantajlı Gruplar ve Sosyal Dahil Etme Proje Direktörü', 'Demokratik Katılım Proje Direktörü', 'Gençlik Sağlığı Proje Direktörü')
      and new.station_id is distinct from 'intl'
      and (tg_op = 'INSERT' or (new.station_id, new.position) is distinct from (old.station_id, old.position)) then

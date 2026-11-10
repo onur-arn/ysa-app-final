@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { AuthFooter, AuthShell } from "../auth-frame"
 import { Button } from "@/components/ui/button"
 import { PRIVACY_URL, TERMS_URL } from "@/components/legal/legal-page"
-import { BOARD_POSITIONS, EXECUTIVE_POSITIONS, HOMETOWNS, isExecutivePosition } from "@/lib/constants"
+import { EXECUTIVE_POSITIONS, HOMETOWNS, boardPositionsFor, isIntlOnlyPosition } from "@/lib/constants"
 import { createClient } from "@/lib/supabase/client"
 import type { Station } from "@/lib/types"
 import { compressImage } from "@/lib/upload"
@@ -190,7 +190,7 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
   const takenHere = new Set(taken.filter((x) => x.station_id === f.station_id).map((x) => x.position))
   const pickStation = (id: string) => {
     set("station_id", id)
-    if (f.position && (taken.some((x) => x.station_id === id && x.position === f.position) || (id !== "intl" && isExecutivePosition(f.position)))) set("position", "")
+    if (f.position && (taken.some((x) => x.station_id === id && x.position === f.position) || (id !== "intl" && isIntlOnlyPosition(f.position)))) set("position", "")
   }
   const option = (p: string) => <option key={p} value={p} disabled={takenHere.has(p)}>{p}{takenHere.has(p) ? " (dolu)" : ""}</option>
   return (
@@ -238,7 +238,7 @@ function Step2({ f, set, stations, taken, onNext, onBack }: StepProps & { statio
         <span className="text-sm font-medium text-foreground">Görevin</span>
         <select value={f.position} onChange={(e) => set("position", e.target.value)} disabled={!f.station_id} className={cn("h-12 w-full appearance-none rounded-xl border border-input bg-card px-3 text-base outline-none focus:border-ring disabled:opacity-60", f.position ? "text-foreground" : "text-muted-foreground")}>
           <option value="" disabled>{f.station_id ? "Görevini seç" : "Önce istasyonunu seç"}</option>
-          <optgroup label="Yönetim Kurulu">{BOARD_POSITIONS.map(option)}</optgroup>
+          <optgroup label="Yönetim Kurulu">{boardPositionsFor(f.station_id).map(option)}</optgroup>
           {f.station_id === "intl" && <optgroup label="Yürütme Kurulu">{EXECUTIVE_POSITIONS.map(option)}</optgroup>}
         </select>
       </label>

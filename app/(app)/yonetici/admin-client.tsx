@@ -1,23 +1,23 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, Eye, Flag, Pencil, Search, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react"
+import { Building2, Check, Eye, Flag, MapPin, Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { StationBadge } from "@/components/station-badge"
 import { Button } from "@/components/ui/button"
 import { Card, Chips, EmptyState, Pill, Segmented } from "@/components/ui/misc"
-import { Field, Select, Sheet } from "@/components/ui/sheet"
+import { Field, Input, Select, Sheet } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useReports } from "@/lib/data/hooks"
-import { isExecutivePosition, positionsFor } from "@/lib/constants"
+import { isIntlOnlyPosition, positionsFor } from "@/lib/constants"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
-import type { Profile, Report } from "@/lib/types"
+import type { Profile, Report, Station } from "@/lib/types"
 
 const ALL_KEY = ["admin-profiles"] as const
 
@@ -28,7 +28,7 @@ export function AdminClient() {
     queryFn: async () => ((await createClient().from("profiles").select("*").order("created_at", { ascending: false })).data ?? []) as Profile[],
   })
   const pending = profiles.filter((p) => p.status === "pending")
-  const [tab, setTab] = useState<"pending" | "members" | "reports">(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "reports" ? "reports" : "pending")
+  const [tab, setTab] = useState<"pending" | "members" | "stations" | "reports">(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "reports" ? "reports" : "pending")
   const { data: reports = [] } = useReports(true)
   const openReports = reports.filter((r) => r.status === "open")
   return (
@@ -36,9 +36,13 @@ export function AdminClient() {
       <Segmented value={tab} onChange={setTab} layoutId="admin-tab" options={[
         { id: "pending", label: <span className="flex items-center gap-1.5"><UserCheck className="size-4" />{t("admin.pending")}</span>, count: pending.length },
         { id: "members", label: <span className="flex items-center gap-1.5"><Users className="size-4" />{t("admin.members")}</span> },
+        { id: "stations", label: <span className="flex items-center gap-1.5"><Building2 className="size-4" />{t("admin.stations")}</span> },
         { id: "reports", label: <span className="flex items-center gap-1.5"><Flag className="size-4" />{t("mod.tab.reports")}</span>, count: openReports.length },
       ]} />
-      {tab === "pending" ? <Pending pending={pending} /> : tab === "members" ? <Members profiles={profiles.filter((p) => p.status !== "pending")} /> : <Reports reports={reports} />}
+      {tab === "pending" ? <Pending pending={pending} />
+        : tab === "members" ? <Members profiles={profiles.filter((p) => p.status !== "pending")} />
+        : tab === "stations" ? <Stations />
+        : <Reports reports={reports} />}
     </div>
   )
 }
@@ -114,7 +118,7 @@ function Members({ profiles }: { profiles: Profile[] }) {
             <Avatar name={p.full_name} photoUrl={p.photo_url} stationId={p.station_id} size={38} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-foreground">{p.full_name}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{p.position ?? t("profile.member")} · {station(p.station_id)?.city}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{p.position ?? t("profile.member")} · {station(p.station_id)?.city ?? "Misafir"}</span>
             </span>
             {p.app_role === "admin" && <Pill tone="violet"><ShieldCheck className="size-3" /> Admin</Pill>}
             <Pencil className="size-4 text-muted-foreground" />
@@ -143,7 +147,10 @@ function MemberEditor({ profile, onClose }: { profile: Profile | null; onClose: 
 
   async function save() {
     setLoading(true)
-    const { error } = await createClient().from("profiles").update({ status: v.status, station_id: v.station_id, position: v.position || null }).eq("id", profile!.id)
+    const guest = !v.station_id
+    const { error } = await createClient().from("profiles")
+      .update({ status: v.status, station_id: guest ? null : v.station_id, position: guest ? "Misafir" : v.position === "Misafir" ? null : v.position || null })
+      .eq("id", profile!.id)
     setLoading(false)
     if (error) return toast(error.message.includes("unique") ? t("directory.positionTaken") : t("common.error"), { error: true })
     toast(t("common.saved"))
@@ -173,18 +180,149 @@ function MemberEditor({ profile, onClose }: { profile: Profile | null; onClose: 
           </Field>
         </div>
         <Field label={t("profile.station")}>
-          <Select value={v.station_id ?? ""} onChange={(e) => setDraft({ ...draft, station_id: e.target.value, ...(e.target.value !== "intl" && isExecutivePosition(v.position) ? { position: "" } : {}) })}>
+          <Select value={v.station_id ?? ""} onChange={(e) => setDraft({ ...draft, station_id: e.target.value || null, ...((!e.target.value || v.position === "Misafir" || (e.target.value !== "intl" && isIntlOnlyPosition(v.position))) ? { position: "" } : {}) })}>
             {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            <option value="">{t("admin.guest")}</option>
           </Select>
         </Field>
-        <Field label={t("profile.position")}>
-          <Select value={v.position ?? ""} onChange={(e) => setDraft({ ...draft, position: e.target.value })}>
-            <option value="">{t("profile.memberOnly")}</option>
-            {positionsFor(v.station_id).map((p) => <option key={p}>{p}</option>)}
-          </Select>
-        </Field>
+        {v.station_id && (
+          <Field label={t("profile.position")}>
+            <Select value={v.position === "Misafir" ? "" : v.position ?? ""} onChange={(e) => setDraft({ ...draft, position: e.target.value })}>
+              <option value="">{t("profile.memberOnly")}</option>
+              {positionsFor(v.station_id).map((p) => <option key={p}>{p}</option>)}
+            </Select>
+          </Field>
+        )}
         <p className="rounded-2xl bg-secondary/60 p-3 text-xs text-muted-foreground">{t("admin.rolesHelp")}</p>
         {!self && <Button variant="ghost" onClick={hardDelete} className="text-destructive"><Trash2 className="size-4" /> {t("admin.deleteAccount")}</Button>}
+      </div>
+    </Sheet>
+  )
+}
+
+/** "#RRGGBB" ⇄ the "H S% L%" strings stations store */
+function hexToHsl(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min
+  let h = 0
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1))
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return `${Math.round((h * 60 + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`
+}
+function hslToHex(hsl: string) {
+  const [h, s, l] = hsl.replace(/%/g, "").split(/\s+/).map(Number)
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    return Math.round(255 * (l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0")
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+const slug = (city: string) => city.toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+
+function Stations() {
+  const { t } = useI18n()
+  const { stations } = useApp()
+  const [edit, setEdit] = useState<Station | "new" | null>(null)
+  return (
+    <>
+      <p className="text-sm text-muted-foreground">{t("admin.station.help")}</p>
+      <Button onClick={() => setEdit("new")}><Plus className="size-4" /> {t("admin.station.new")}</Button>
+      <Card className="divide-y divide-border/70 p-0">
+        {stations.map((s) => (
+          <button key={s.id} onClick={() => setEdit(s)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-secondary/40">
+            <span className="size-4 shrink-0 rounded-full" style={{ backgroundColor: `hsl(${s.color})` }} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-foreground">{s.name}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{s.short} · {s.city}</span>
+            </span>
+            <Pencil className="size-4 text-muted-foreground" />
+          </button>
+        ))}
+      </Card>
+      {edit && <StationEditor station={edit === "new" ? null : edit} onClose={() => setEdit(null)} />}
+    </>
+  )
+}
+
+function StationEditor({ station, onClose }: { station: Station | null; onClose: () => void }) {
+  const { t } = useI18n()
+  const { stations } = useApp()
+  const router = useRouter()
+  const [city, setCity] = useState(station?.city ?? "")
+  const [name, setName] = useState(station?.name ?? "")
+  const [short, setShort] = useState(station?.short ?? "")
+  const [color, setColor] = useState(station ? hslToHex(station.color) : "#e11d74")
+  const [place, setPlace] = useState<{ lat: number; lng: number; label: string } | null>(
+    station?.lat != null && station.lng != null ? { lat: station.lat, lng: station.lng, label: station.city } : null)
+  const [busy, setBusy] = useState<"locate" | "save" | null>(null)
+
+  function changeCity(v: string) {
+    setCity(v)
+    if (!station) {
+      setName(v.trim() ? `${v.trim()} İstasyonu` : "")
+      setShort(v.trim().slice(0, 3).toLocaleUpperCase("tr"))
+    }
+    setPlace(null)
+  }
+
+  // Open-Meteo geocoding: free, no key; only the city name is sent.
+  async function locate() {
+    if (!city.trim()) return
+    setBusy("locate")
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=${encodeURIComponent(city.trim())}`).catch(() => null)
+    const hit = res?.ok ? ((await res.json()) as { results?: { latitude: number; longitude: number; name: string; country?: string }[] }).results?.[0] : undefined
+    setBusy(null)
+    if (!hit) return toast(t("admin.station.notFound"), { error: true })
+    setPlace({ lat: hit.latitude, lng: hit.longitude, label: [hit.name, hit.country].filter(Boolean).join(", ") })
+  }
+
+  async function save() {
+    if (!city.trim() || !name.trim() || !short.trim()) return
+    const row = { city: city.trim(), name: name.trim(), short: short.trim().toLocaleUpperCase("tr").slice(0, 4), color: hexToHsl(color), lat: place?.lat ?? null, lng: place?.lng ?? null }
+    setBusy("save")
+    const sb = createClient()
+    const id = station?.id ?? slug(city)
+    if (!station && (!id || stations.some((s) => s.id === id))) { setBusy(null); return toast(t("admin.station.exists"), { error: true }) }
+    const { error } = station
+      ? await sb.from("stations").update(row).eq("id", station.id)
+      : await sb.from("stations").insert({ id, ...row, position: Math.max(0, ...stations.map((s) => s.position)) + 1 })
+    setBusy(null)
+    if (error) return toast(error.message.includes("duplicate") ? t("admin.station.exists") : t("common.error"), { error: true })
+    toast(station ? t("common.saved") : t("admin.station.created", { name: row.name }))
+    router.refresh()   // the layout reloads the stations: badges, filters and forms pick it up
+    onClose()
+  }
+
+  return (
+    <Sheet open onClose={onClose} title={station ? t("admin.station.edit") : t("admin.station.new")}
+      footer={<Button className="w-full" size="lg" onClick={save} loading={busy === "save"} disabled={!city.trim() || !name.trim() || !short.trim()}>{t("common.save")}</Button>}>
+      <div className="flex flex-col gap-4">
+        <Field label={t("admin.station.city")}>
+          <Input value={city} onChange={(e) => changeCity(e.target.value)} placeholder="Milano" />
+        </Field>
+        {station?.id !== "intl" && (
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={locate} loading={busy === "locate"} disabled={!city.trim()}><MapPin className="size-4" /> {t("admin.station.locate")}</Button>
+            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{place ? t("admin.station.located", { place: place.label }) : t("admin.station.notLocated")}</span>
+          </div>
+        )}
+        <Field label={t("admin.station.name")}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("admin.station.short")}>
+            <Input value={short} maxLength={4} onChange={(e) => setShort(e.target.value)} />
+          </Field>
+          <Field label={t("admin.station.color")}>
+            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-12 w-full cursor-pointer rounded-2xl border border-border bg-background p-1" />
+          </Field>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {stations.filter((s) => s.id !== station?.id).map((s) => (
+            <span key={s.id} className="flex items-center gap-1 text-[11px] text-muted-foreground"><span className="size-3 rounded-full" style={{ backgroundColor: `hsl(${s.color})` }} />{s.short}</span>
+          ))}
+        </div>
       </div>
     </Sheet>
   )

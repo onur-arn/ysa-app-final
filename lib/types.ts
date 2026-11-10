@@ -1,4 +1,4 @@
-export type Station = { id: string; name: string; short: string; city: string; color: string; position: number }
+export type Station = { id: string; name: string; short: string; city: string; color: string; position: number; lat: number | null; lng: number | null }
 
 export type NotifPrefs = { messages: boolean; tasks: boolean; events: boolean; members: boolean }
 

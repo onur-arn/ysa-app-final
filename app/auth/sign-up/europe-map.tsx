@@ -49,7 +49,8 @@ export function EuropeMap({
   selected: string
   onSelect: (id: string) => void
 }) {
-  const visibleStations = stations.filter((s) => s.id !== "intl" && CITY_COORDS[s.id])
+  const coordsOf = (s: Station): [number, number] | undefined => (s.lng != null && s.lat != null ? [s.lng, s.lat] : CITY_COORDS[s.id])
+  const visibleStations = stations.filter((s) => s.id !== "intl" && coordsOf(s))
 
   return (
     <ComposableMap
@@ -80,7 +81,7 @@ export function EuropeMap({
       </Geographies>
 
       {visibleStations.map(s => {
-        const coords = CITY_COORDS[s.id]
+        const coords = coordsOf(s)!
         const offset = LABEL_OFFSET[s.id] ?? [8, -7]
         const isSelected = selected === "intl" || selected === s.id
         return (
