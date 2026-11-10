@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Building2, Check, Eye, Flag, MapPin, Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react"
+import { Building2, Check, ChevronDown, ChevronUp, Eye, Flag, MapPin, Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
@@ -223,22 +223,51 @@ const slug = (city: string) => city.toLocaleLowerCase("tr").normalize("NFD").rep
 function Stations() {
   const { t } = useI18n()
   const { stations } = useApp()
+  const router = useRouter()
   const [edit, setEdit] = useState<Station | "new" | null>(null)
+  const [moving, setMoving] = useState(false)
+  // Uluslararası Büro always comes first; the arrows order the other stations.
+  const intl = stations.filter((s) => s.id === "intl")
+  const others = stations.filter((s) => s.id !== "intl")
+
+  async function move(i: number, dir: -1 | 1) {
+    const order = [...others]
+    ;[order[i], order[i + dir]] = [order[i + dir], order[i]]
+    setMoving(true)
+    const sb = createClient()
+    // Renumber 1…n (0 is Uluslararası): also repairs equal positions left by older stations.
+    const results = await Promise.all(order.map((s, k) => s.position === k + 1 ? null : sb.from("stations").update({ position: k + 1 }).eq("id", s.id)))
+    setMoving(false)
+    if (results.some((r) => r?.error)) toast(t("common.error"), { error: true })
+    router.refresh()
+  }
+
+  const row = (s: Station, i: number | null) => (
+    <div key={s.id} className="flex items-center gap-1 pr-2">
+      <button onClick={() => setEdit(s)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left hover:bg-secondary/40">
+        <span className="size-4 shrink-0 rounded-full" style={{ backgroundColor: `hsl(${s.color})` }} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-foreground">{s.name}</span>
+          <span className="block truncate text-[11px] text-muted-foreground">{s.short} · {s.city}</span>
+        </span>
+        <Pencil className="size-4 shrink-0 text-muted-foreground" />
+      </button>
+      {i !== null && (
+        <>
+          <button aria-label={t("admin.station.up")} disabled={moving || i === 0} onClick={() => move(i, -1)} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary disabled:opacity-30"><ChevronUp className="size-4" /></button>
+          <button aria-label={t("admin.station.down")} disabled={moving || i === others.length - 1} onClick={() => move(i, 1)} className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary disabled:opacity-30"><ChevronDown className="size-4" /></button>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <>
       <p className="text-sm text-muted-foreground">{t("admin.station.help")}</p>
       <Button onClick={() => setEdit("new")}><Plus className="size-4" /> {t("admin.station.new")}</Button>
       <Card className="divide-y divide-border/70 p-0">
-        {stations.map((s) => (
-          <button key={s.id} onClick={() => setEdit(s)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-secondary/40">
-            <span className="size-4 shrink-0 rounded-full" style={{ backgroundColor: `hsl(${s.color})` }} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-foreground">{s.name}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{s.short} · {s.city}</span>
-            </span>
-            <Pencil className="size-4 text-muted-foreground" />
-          </button>
-        ))}
+        {intl.map((s) => row(s, null))}
+        {others.map((s, i) => row(s, i))}
       </Card>
       {edit && <StationEditor station={edit === "new" ? null : edit} onClose={() => setEdit(null)} />}
     </>

@@ -35,6 +35,8 @@ export const DICT: Record<string, [string, string, string]> = {
   "admin.station.delete": ["İstasyonu sil","Supprimer l'antenne","Delete station"],
   "admin.station.deleteConfirm": ["{name} silinecek: üyeleri Misafir olur, görevleri ve ajanda etkinlikleri silinir. Onaylamak için DELETE yaz.","{name} sera supprimée : ses membres passent en Misafir, ses tâches et ses événements d'agenda sont supprimés. Tape DELETE pour confirmer.","{name} will be deleted: its members become Misafir, its tasks and agenda events are deleted. Type DELETE to confirm."],
   "admin.station.deleted": ["{name} silindi","{name} supprimée","{name} deleted"],
+  "admin.station.up": ["Yukarı taşı","Monter","Move up"],
+  "admin.station.down": ["Aşağı taşı","Descendre","Move down"],
   "admin.station.help": ["Yeni istasyon kayıt formunda, haritada, rehberde ve tüm listelerde hemen görünür.","La nouvelle antenne apparaît tout de suite dans l'inscription, sur la carte, dans l'annuaire et dans toutes les listes.","The new station shows up right away in sign-up, on the map, in the directory and in every list."],
   "agenda.addToCalendar": ["Takvimime ekle","Ajouter à mon agenda","Add to my calendar"],
   "agenda.confirmDelete": ["Bu etkinlik silinsin mi?","Supprimer cet événement ?","Delete this event?"],
