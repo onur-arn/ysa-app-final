@@ -15,7 +15,7 @@ const csp = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https:",
-  `connect-src 'self' blob: data: https://${supabaseHost} wss://${supabaseHost} https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com https://cdn.jsdelivr.net${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
+  `connect-src 'self' blob: data: https://${supabaseHost} wss://${supabaseHost} https://*.supabase.co wss://*.supabase.co https://raw.githubusercontent.com https://cdn.jsdelivr.net https://geocoding-api.open-meteo.com${isDev ? " ws://localhost:* http://localhost:*" : ""}`,
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",
