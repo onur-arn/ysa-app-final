@@ -5,8 +5,9 @@
 --   • Users are referenced by uuid everywhere (never by name).
 --   • Sign-up goes through Supabase Auth; profiles start "pending" and an admin
 --     approves them. No password is ever stored by the app.
---   • "Uluslararası Büro" (station 'intl') is the central office: it sees every
---     station's tasks and private events, pins messages, assigns positions.
+--   • "Uluslararası Büro" (station 'intl') is the central office: its Yönetim Kurulu
+--     sees every station's tasks and private events, pins messages, assigns positions
+--     and moderates content. Its Yürütme Kurulu has ordinary member rights.
 --   • Notifications are only written by triggers (never by clients), so nobody
 --     can forge one; push delivery reads the same table.
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -110,10 +111,25 @@ create or replace function public.my_station() returns text
 language sql stable security definer set search_path = public as $$
   select station_id from profiles where id = auth.uid()
 $$;
--- Uluslararası Büro member (or platform admin): the central office powers
+
+create or replace function public.is_board_position(p text) returns boolean
+language sql immutable set search_path = public as $$
+  select p in ('Başkan', 'Sekreter', 'Sayman', 'Proje Direktörü', 'Dış İlişkiler Direktörü', 'İç İlişkiler Direktörü',
+               'Kurumsal İletişim Direktörü', 'Eğitim Koordinatörü', 'Avrupa Birliği Projeler Sorumlusu')
+$$;
+-- Yönetim Kurulu of Uluslararası Büro (or platform admin): the moderation powers
+-- (deleting other people's posts, comments, events and tasks, editing their events)
+create or replace function public.is_board() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists(select 1 from profiles where id = auth.uid() and status = 'active'
+    and (app_role = 'admin' or (station_id = 'intl' and public.is_board_position(position))))
+$$;
+-- The central office powers (every station's tasks and private events, pins, positions)
+-- belong to the Yönetim Kurulu of Uluslararası Büro only: its Yürütme Kurulu has the
+-- rights of an ordinary station member.
 create or replace function public.is_intl() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists(select 1 from profiles where id = auth.uid() and status = 'active' and (station_id = 'intl' or app_role = 'admin'))
+  select public.is_board()
 $$;
 
 -- 🔐 VIP accounts: the only ones allowed into the Yönetici panel (gold lock in Ayarlar).
@@ -174,12 +190,19 @@ begin
   new.email := old.email;   -- the address password resets go to: never editable from the app
   new.first_name := old.first_name;   -- names are set at sign-up; only admins can correct them
   new.last_name := old.last_name;
-  if not public.is_intl() or new.id = auth.uid() then
-    new.status := old.status;
-    new.approved_at := old.approved_at;
-  end if;
+  -- validating, suspending and deleting accounts: VIP admins only (Yönetici panel)
+  new.status := old.status;
+  new.approved_at := old.approved_at;
   -- pending accounts too: picking 'intl' before approval would grant its powers once approved
-  if not public.is_intl() then
+  if not public.is_intl() or new.id = auth.uid() then
+    new.station_id := old.station_id;
+    new.position := old.position;
+  end if;
+  -- only the board hands out (or takes back) a Yönetim Kurulu seat in Uluslararası Büro
+  if not public.is_board()
+     and ((new.station_id = 'intl' and public.is_board_position(new.position))
+          or (old.station_id = 'intl' and public.is_board_position(old.position)))
+     and (new.station_id, new.position) is distinct from (old.station_id, old.position) then
     new.station_id := old.station_id;
     new.position := old.position;
   end if;
@@ -187,6 +210,23 @@ begin
 end $$;
 drop trigger if exists protect_profile on profiles;
 create trigger protect_profile before update on profiles for each row execute function public.protect_profile();
+
+-- The Yürütme Kurulu only exists in Uluslararası Büro: other stations have the Yönetim Kurulu only.
+-- Checked only when the station or the position changes, so existing rows stay editable.
+create or replace function public.guard_executive_position() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if new.position in ('İnovasyon ve Girişimcilik Proje Direktörü', 'Kültür ve Sanat Proje Direktörü', 'Gençlik ve Çevre Proje Direktörü',
+                      'Dezavantajlı Gruplar ve Sosyal Dahil Etme Proje Direktörü', 'Demokratik Katılım Proje Direktörü', 'Gençlik Sağlığı Proje Direktörü')
+     and new.station_id is distinct from 'intl'
+     and (tg_op = 'INSERT' or (new.station_id, new.position) is distinct from (old.station_id, old.position)) then
+    raise exception 'executive_intl_only: the Yürütme Kurulu only exists in Uluslararası Büro';
+  end if;
+  return new;
+end $$;
+drop trigger if exists guard_executive_position on profiles;
+create trigger guard_executive_position before insert or update of station_id, position on profiles
+  for each row execute function public.guard_executive_position();
 
 alter table stations enable row level security;
 alter table profiles enable row level security;
@@ -326,7 +366,7 @@ create policy "posts read"   on posts for select to authenticated using (public.
 create policy "posts insert" on posts for insert to authenticated
   with check (author_id = auth.uid() and public.is_active() and not public.is_guest() and kind in ('post', 'igem') and (not pinned or public.is_intl()));
 create policy "posts update" on posts for update to authenticated using (author_id = auth.uid() or public.is_intl());
-create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_intl());
+create policy "posts delete" on posts for delete to authenticated using (author_id = auth.uid() or public.is_board());
 
 -- Feed posts are kept 30 days, then deleted for good (pinned ones stay).
 -- Called opportunistically by the app on every feed load, and nightly if pg_cron exists.
@@ -343,12 +383,20 @@ begin
 exception when others then null;
 end $$;
 
--- Only Uluslararası Büro may (un)pin, whoever edits the post.
+-- Only Uluslararası Büro may (un)pin, whoever edits the post; only the author or the
+-- board may change anything else in it.
 create or replace function public.posts_guard_pin() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare keep_pin boolean;
 begin
-  if auth.uid() is not null and new.pinned is distinct from old.pinned and not public.is_intl() then
+  if auth.uid() is null then return new; end if;
+  if new.pinned is distinct from old.pinned and not public.is_intl() then
     new.pinned := old.pinned;
+  end if;
+  if old.author_id is distinct from auth.uid() and not public.is_board() then
+    keep_pin := new.pinned;
+    new := old;
+    new.pinned := keep_pin;
   end if;
   return new;
 end $$;
@@ -365,7 +413,7 @@ drop policy if exists "pcomments insert" on post_comments;
 drop policy if exists "pcomments delete" on post_comments;
 create policy "pcomments read"   on post_comments for select to authenticated using (public.is_active() and not public.has_blocked(author_id));
 create policy "pcomments insert" on post_comments for insert to authenticated with check (author_id = auth.uid() and public.is_active());
-create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_intl());
+create policy "pcomments delete" on post_comments for delete to authenticated using (author_id = auth.uid() or public.is_board());
 
 -- ── STORIES (24 h, with editor + music) ─────────────────────────────────────
 create table if not exists stories (
@@ -432,9 +480,9 @@ create policy "events read"   on events for select to authenticated using (publi
 create policy "events insert" on events for insert to authenticated
   with check (created_by = auth.uid() and public.is_active() and (public.is_intl() or station_id = public.my_station()));
 create policy "events update" on events for update to authenticated
-  using (created_by = auth.uid() or public.is_intl())
+  using (created_by = auth.uid() or public.is_board())
   with check (public.is_intl() or station_id = public.my_station());
-create policy "events delete" on events for delete to authenticated using (created_by = auth.uid() or public.is_intl());
+create policy "events delete" on events for delete to authenticated using (created_by = auth.uid() or public.is_board());
 
 -- Private events of other stations: only the time slot is shared, shown as 🔒 without any content.
 create or replace function public.locked_events()
@@ -483,7 +531,7 @@ create policy "tasks read"   on tasks for select to authenticated using (public.
 create policy "tasks insert" on tasks for insert to authenticated
   with check (created_by = auth.uid() and public.is_active() and (public.is_intl() or station_id = public.my_station()));
 create policy "tasks update" on tasks for update to authenticated using (public.can_see_task(station_id, assignee_id, created_by));
-create policy "tasks delete" on tasks for delete to authenticated using (created_by = auth.uid() or public.is_intl());
+create policy "tasks delete" on tasks for delete to authenticated using (created_by = auth.uid() or public.is_board());
 
 drop policy if exists "tcomments read" on task_comments;
 drop policy if exists "tcomments insert" on task_comments;

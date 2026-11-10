@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
 
-  const { data: allowed } = await supabase.rpc("is_intl")   // Uluslararası Büro or VIP admin
+  const { data: allowed } = await supabase.rpc("is_admin")   // VIP admins only
   if (!allowed) return NextResponse.json({ error: "forbidden" }, { status: 403 })
 
   const { userId } = (await request.json().catch(() => ({}))) as { userId?: string }

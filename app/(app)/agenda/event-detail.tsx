@@ -13,7 +13,7 @@ import { useMemberMap } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { downloadIcs } from "@/lib/ics"
 import { useI18n } from "@/lib/i18n/context"
-import { isIntl } from "@/lib/permissions"
+import { isBoard } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/client"
 import type { AppEvent } from "@/lib/types"
 
@@ -35,7 +35,7 @@ export function EventDetail({ event, onClose, onEdit }: { event: AppEvent | null
       </Sheet>
     )
   }
-  const canEdit = event.created_by === me.id || isIntl(me)
+  const canEdit = event.created_by === me.id || isBoard(me)
   const start = new Date(event.starts_at)
   const end = event.ends_at ? new Date(event.ends_at) : null
   const past = (end ?? start) < new Date()

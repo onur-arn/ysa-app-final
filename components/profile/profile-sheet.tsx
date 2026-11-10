@@ -16,7 +16,7 @@ import { useApp } from "@/components/providers/app-context"
 import { useMemberMap } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
 import { LEVELS, levelOf, POINT_RULES } from "@/lib/levels"
-import { isIntl } from "@/lib/permissions"
+import { isAdmin } from "@/lib/permissions"
 import { deletedClass } from "@/lib/members"
 import { cn } from "@/lib/utils"
 import { useOnline } from "@/lib/realtime/hub"
@@ -190,7 +190,7 @@ export function ProfileSheet({ memberId, onClose }: { memberId: string | null; o
 
       {p.id !== me.id && <SafetyActions userId={p.id} name={p.full_name} />}
 
-      {isIntl(me) && p.id !== me.id && p.app_role !== "admin" && (
+      {isAdmin(me) && p.id !== me.id && p.app_role !== "admin" && (
         <Button variant="ghost" className="mt-3 w-full text-destructive" onClick={deleteAccount}><Trash2 className="size-4" /> {t("directory.deleteAccount")}</Button>
       )}
     </Sheet>

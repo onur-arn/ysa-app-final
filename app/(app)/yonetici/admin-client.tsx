@@ -12,7 +12,7 @@ import { Field, Select, Sheet } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { useMemberMap, useReports } from "@/lib/data/hooks"
-import { POSITIONS } from "@/lib/constants"
+import { isExecutivePosition, positionsFor } from "@/lib/constants"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { dispatchPush } from "@/lib/push"
@@ -173,14 +173,14 @@ function MemberEditor({ profile, onClose }: { profile: Profile | null; onClose: 
           </Field>
         </div>
         <Field label={t("profile.station")}>
-          <Select value={v.station_id ?? ""} onChange={(e) => setDraft({ ...draft, station_id: e.target.value })}>
+          <Select value={v.station_id ?? ""} onChange={(e) => setDraft({ ...draft, station_id: e.target.value, ...(e.target.value !== "intl" && isExecutivePosition(v.position) ? { position: "" } : {}) })}>
             {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         </Field>
         <Field label={t("profile.position")}>
           <Select value={v.position ?? ""} onChange={(e) => setDraft({ ...draft, position: e.target.value })}>
             <option value="">{t("profile.memberOnly")}</option>
-            {POSITIONS.map((p) => <option key={p}>{p}</option>)}
+            {positionsFor(v.station_id).map((p) => <option key={p}>{p}</option>)}
           </Select>
         </Field>
         <p className="rounded-2xl bg-secondary/60 p-3 text-xs text-muted-foreground">{t("admin.rolesHelp")}</p>

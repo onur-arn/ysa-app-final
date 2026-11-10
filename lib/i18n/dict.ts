@@ -13,7 +13,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "admin.pending": ["Bekleyen","En attente","Pending"],
   "admin.reject": ["Reddet","Refuser","Reject"],
   "admin.rejected": ["Başvuru reddedildi","Demande refusée","Request rejected"],
-  "admin.rolesHelp": ["Admin: Yönetici Paneline ve üye yönetimine erişir. Uluslararası Büro üyeleri tüm istasyonların görevlerini ve özel etkinliklerini görür, mesaj sabitler ve görev atar.","Admin : accès au panneau et à la gestion des membres. Les membres du Bureau Uluslararası voient les tâches et événements privés de toutes les antennes, épinglent des messages et attribuent les postes.","Admin: access to the panel and member management. Uluslararası Büro members see every station's tasks and private events, pin messages and assign positions."],
+  "admin.rolesHelp": ["Admin: Yönetici Paneline ve üye yönetimine erişir. Uluslararası Büro Yönetim Kurulu üyeleri tüm istasyonların görevlerini ve özel etkinliklerini görür, mesaj sabitler ve görev atar.","Admin : accès au panneau et à la gestion des membres. Les membres du Yönetim Kurulu du Bureau Uluslararası voient les tâches et événements privés de toutes les antennes, épinglent des messages et attribuent les postes.","Admin: access to the panel and member management. Uluslararası Büro Yönetim Kurulu members see every station's tasks and private events, pin messages and assign positions."],
   "admin.status.active": ["Aktif","Actif","Active"],
   "admin.status.rejected": ["Reddedildi","Refusé","Rejected"],
   "admin.status.suspended": ["Askıda","Suspendu","Suspended"],

@@ -15,7 +15,7 @@ import { useMemberMap, useTaskComments } from "@/lib/data/hooks"
 import { deletedClass } from "@/lib/members"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isIntl } from "@/lib/permissions"
+import { isBoard } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/client"
 import type { Task, TaskStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -29,7 +29,7 @@ export function TaskDetail({ task, onClose, onEdit, onStatus }: { task: Task | n
   const { data: comments = [] } = useTaskComments(task?.id ?? null)
   const [text, setText] = useState("")
   if (!task) return <Sheet open={false} onClose={onClose}>{null}</Sheet>
-  const canDelete = task.created_by === me.id || isIntl(me)
+  const canDelete = task.created_by === me.id || isBoard(me)
   const prio = TASK_PRIORITIES.find((p) => p.id === task.priority)!
 
   async function send(e: React.FormEvent) {

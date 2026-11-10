@@ -16,7 +16,7 @@ import { useMemberMap } from "@/lib/data/hooks"
 import { deletedClass } from "@/lib/members"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
-import { isIntl } from "@/lib/permissions"
+import { isBoard, isIntl } from "@/lib/permissions"
 import { ReportSheet, type ReportTarget } from "@/components/report-sheet"
 import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
@@ -35,7 +35,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const supabase = createClient()
   const author = member(post.author_id)
   const liked = post.post_likes.some((l) => l.user_id === me.id)
-  const canDelete = post.author_id === me.id || isIntl(me)
+  const canDelete = post.author_id === me.id || isBoard(me)
   const canReport = post.author_id !== me.id && post.kind !== "welcome"
 
   /** optimistic edit of this post in the shared feed cache */
@@ -169,7 +169,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
                 <div className="group min-w-0 flex-1 rounded-2xl bg-secondary/70 px-3 py-2">
                   <p className="flex items-center gap-1 text-xs font-semibold text-foreground">
                     <span className={deletedClass(a)}>{a?.full_name}</span> <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span>
-                    {(c.author_id === me.id || isIntl(me)) && (
+                    {(c.author_id === me.id || isBoard(me)) && (
                       <button onClick={() => removeComment(c.id)} className="ml-auto text-muted-foreground opacity-60 hover:text-destructive group-hover:opacity-100" aria-label={t("common.delete")}><Trash2 className="size-3" /></button>
                     )}
                   </p>

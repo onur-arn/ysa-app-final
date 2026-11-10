@@ -37,6 +37,10 @@ export const EXECUTIVE_POSITIONS = [
 
 export const POSITIONS = [...BOARD_POSITIONS, ...EXECUTIVE_POSITIONS] as const
 
+/** The Yürütme Kurulu only exists in Uluslararası Büro: other stations have the Yönetim Kurulu only. */
+export const isExecutivePosition = (p: string | null | undefined) => (EXECUTIVE_POSITIONS as readonly string[]).includes(p ?? "")
+export const positionsFor = (stationId: string | null | undefined): readonly string[] => (stationId === "intl" ? POSITIONS : BOARD_POSITIONS)
+
 export const HOMETOWNS = [
   "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan", "Artvin",
   "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa",
