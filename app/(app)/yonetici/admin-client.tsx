@@ -255,7 +255,7 @@ function StationEditor({ station, onClose }: { station: Station | null; onClose:
   const [color, setColor] = useState(station ? hslToHex(station.color) : "#e11d74")
   const [place, setPlace] = useState<{ lat: number; lng: number; label: string } | null>(
     station?.lat != null && station.lng != null ? { lat: station.lat, lng: station.lng, label: station.city } : null)
-  const [busy, setBusy] = useState<"locate" | "save" | null>(null)
+  const [busy, setBusy] = useState<"locate" | "save" | "delete" | null>(null)
 
   function changeCity(v: string) {
     setCity(v)
@@ -267,20 +267,27 @@ function StationEditor({ station, onClose }: { station: Station | null; onClose:
   }
 
   // Open-Meteo geocoding: free, no key; only the city name is sent.
+  async function geocode() {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=${encodeURIComponent(city.trim())}`).catch(() => null)
+    const hit = res?.ok ? ((await res.json().catch(() => ({}))) as { results?: { latitude: number; longitude: number; name: string; country?: string }[] }).results?.[0] : undefined
+    return hit ? { lat: hit.latitude, lng: hit.longitude, label: [hit.name, hit.country].filter(Boolean).join(", ") } : null
+  }
+
   async function locate() {
     if (!city.trim()) return
     setBusy("locate")
-    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=tr&name=${encodeURIComponent(city.trim())}`).catch(() => null)
-    const hit = res?.ok ? ((await res.json()) as { results?: { latitude: number; longitude: number; name: string; country?: string }[] }).results?.[0] : undefined
+    const found = await geocode()
     setBusy(null)
-    if (!hit) return toast(t("admin.station.notFound"), { error: true })
-    setPlace({ lat: hit.latitude, lng: hit.longitude, label: [hit.name, hit.country].filter(Boolean).join(", ") })
+    if (!found) return toast(t("admin.station.notFound"), { error: true })
+    setPlace(found)
   }
 
   async function save() {
     if (!city.trim() || !name.trim() || !short.trim()) return
-    const row = { city: city.trim(), name: name.trim(), short: short.trim().toLocaleUpperCase("tr").slice(0, 4), color: hexToHsl(color), lat: place?.lat ?? null, lng: place?.lng ?? null }
     setBusy("save")
+    // Not placed by hand yet: place it now, so the station shows on the sign-up map right away.
+    const at = place ?? (station?.id === "intl" ? null : await geocode())
+    const row = { city: city.trim(), name: name.trim(), short: short.trim().toLocaleUpperCase("tr").slice(0, 4), color: hexToHsl(color), lat: at?.lat ?? null, lng: at?.lng ?? null }
     const sb = createClient()
     const id = station?.id ?? slug(city)
     if (!station && (!id || stations.some((s) => s.id === id))) { setBusy(null); return toast(t("admin.station.exists"), { error: true }) }
@@ -290,7 +297,21 @@ function StationEditor({ station, onClose }: { station: Station | null; onClose:
     setBusy(null)
     if (error) return toast(error.message.includes("duplicate") ? t("admin.station.exists") : t("common.error"), { error: true })
     toast(station ? t("common.saved") : t("admin.station.created", { name: row.name }))
+    if (station?.id !== "intl" && !at) toast(t("admin.station.notFound"), { error: true })
     router.refresh()   // the layout reloads the stations: badges, filters and forms pick it up
+    onClose()
+  }
+
+  // Members become Misafir; the station's tasks and agenda events are deleted (supabase delete_station).
+  async function remove() {
+    if (!station || station.id === "intl") return
+    if (prompt(t("admin.station.deleteConfirm", { name: station.name })) !== "DELETE") return
+    setBusy("delete")
+    const { error } = await createClient().rpc("delete_station", { p_id: station.id })
+    setBusy(null)
+    if (error) return toast(t("common.error"), { error: true })
+    toast(t("admin.station.deleted", { name: station.name }))
+    router.refresh()
     onClose()
   }
 
@@ -323,6 +344,9 @@ function StationEditor({ station, onClose }: { station: Station | null; onClose:
             <span key={s.id} className="flex items-center gap-1 text-[11px] text-muted-foreground"><span className="size-3 rounded-full" style={{ backgroundColor: `hsl(${s.color})` }} />{s.short}</span>
           ))}
         </div>
+        {station && station.id !== "intl" && (
+          <Button variant="ghost" className="text-destructive" onClick={remove} loading={busy === "delete"}><Trash2 className="size-4" /> {t("admin.station.delete")}</Button>
+        )}
       </div>
     </Sheet>
   )
