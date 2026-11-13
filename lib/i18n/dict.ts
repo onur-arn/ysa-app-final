@@ -176,7 +176,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "feed.pinTop": ["Sayfanın üstüne sabitle","Épingler en haut du fil","Pin to the top"],
   "feed.pinnedBadge": ["Uluslararası Büro tarafından sabitlendi","Épinglé par le Bureau Uluslararası","Pinned by Uluslararası Büro"],
   "feed.pinnedToast": ["Sabitlendi 📌","Épinglé 📌","Pinned 📌"],
-  "feed.postPlaceholder": ["Toplulukla paylaş… (@ ile kişi, istasyon veya grup etiketle)","Partage avec la communauté… (@ pour mentionner une personne, une station ou un groupe)","Share with the community… (@ to tag a person, station or group)"],
+  "feed.postPlaceholder": ["Toplulukla paylaş… Etiketlemek için: @Ad Soyad, @İstasyon, @Başkanlar","Partage avec la communauté… Pour mentionner : @Prénom Nom, @Station, @Başkanlar","Share with the community… To tag: @First Last, @Station, @Başkanlar"],
   "feed.publish": ["Paylaş","Publier","Publish"],
   "feed.published": ["Paylaşıldı","Publié","Published"],
   "feed.unpin": ["Sabitlemeyi kaldır","Désépingler","Unpin"],

@@ -134,7 +134,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
 
       <p className="whitespace-pre-wrap break-words px-4 pt-3 text-[15px] leading-relaxed text-foreground">
         {post.kind === "igem" && <span className="mb-1 block text-xs font-semibold text-violet-600">{t("feed.igemIntro")}</span>}
-        <FeedMentionText text={post.content} m={post} />
+        <FeedMentionText text={post.content} />
       </p>
       {post.image_url && (
         // eslint-disable-next-line @next/next/no-img-element
