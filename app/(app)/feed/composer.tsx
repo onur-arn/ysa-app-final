@@ -4,14 +4,16 @@ import { useQueryClient } from "@tanstack/react-query"
 import { BarChart3, FileText, ImagePlus, Pin, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { FileChipPreview } from "./file-preview"
+import { collectMentions, MentionTextarea, type MentionCandidate } from "@/components/feed-mentions"
 import { PollFields } from "@/components/poll-view"
 import { Button } from "@/components/ui/button"
-import { Sheet, Textarea, Toggle } from "@/components/ui/sheet"
+import { Sheet, Toggle } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { isIntl } from "@/lib/permissions"
+import { dispatchPush } from "@/lib/push"
 import { createClient } from "@/lib/supabase/client"
 import { compressImage, DOC_ACCEPT, MAX_FILE_BYTES, uploadFile, uploadMedia } from "@/lib/upload"
 
@@ -20,6 +22,7 @@ export function Composer({ open, onClose }: { open: boolean; onClose: () => void
   const { t } = useI18n()
   const qc = useQueryClient()
   const [content, setContent] = useState("")
+  const [picked, setPicked] = useState<MentionCandidate[]>([])
   const [image, setImage] = useState<File | null>(null)
   const [doc, setDoc] = useState<File | null>(null)
   const [withPoll, setWithPoll] = useState(false)
@@ -33,7 +36,7 @@ export function Composer({ open, onClose }: { open: boolean; onClose: () => void
 
   useEffect(() => {
     if (!open) return
-    setContent(""); setImage(null); setDoc(null); setWithPoll(false); setQuestion(""); setOptions(["", ""]); setPinned(false)
+    setContent(""); setPicked([]); setImage(null); setDoc(null); setWithPoll(false); setQuestion(""); setOptions(["", ""]); setPinned(false)
   }, [open])
 
   async function submit() {
@@ -48,7 +51,7 @@ export function Composer({ open, onClose }: { open: boolean; onClose: () => void
       const file_path = doc ? await uploadFile(doc, "feed") : null
       const { data: post, error } = await supabase
         .from("posts")
-        .insert({ author_id: me.id, station_id: me.station_id, content: text || question.trim(), image_url, file_path, file_name: doc?.name ?? null, file_size: doc?.size ?? null, pinned: pinned && isIntl(me) })
+        .insert({ author_id: me.id, station_id: me.station_id, content: text || question.trim(), image_url, file_path, file_name: doc?.name ?? null, file_size: doc?.size ?? null, pinned: pinned && isIntl(me), ...collectMentions(text, picked) })
         .select("id")
         .single()
       if (error) throw error
@@ -58,6 +61,7 @@ export function Composer({ open, onClose }: { open: boolean; onClose: () => void
         await supabase.from("poll_options").insert(opts.map((label, position) => ({ poll_id: poll.id, label, position })))
       }
       void qc.invalidateQueries({ queryKey: qk.feed })
+      dispatchPush()
       toast(t("feed.published"))
       onClose()
     } catch {
@@ -69,7 +73,7 @@ export function Composer({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Sheet open={open} onClose={onClose} title={t("feed.newPost")} footer={<Button className="w-full" size="lg" onClick={submit} loading={loading}>{t("feed.publish")}</Button>}>
       <div className="flex flex-col gap-4">
-        <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder={t("feed.postPlaceholder")} className="min-h-32" />
+        <MentionTextarea value={content} onChange={setContent} picked={picked} onPick={setPicked} placeholder={t("feed.postPlaceholder")} className="min-h-32" />
         {image && (
           <div className="relative overflow-hidden rounded-2xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}

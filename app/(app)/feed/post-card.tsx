@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Flag, GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { FeedMentionText } from "@/components/feed-mentions"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { FileChip } from "@/components/file-chip"
 import { Logo } from "@/components/logo"
@@ -133,7 +134,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
 
       <p className="whitespace-pre-wrap break-words px-4 pt-3 text-[15px] leading-relaxed text-foreground">
         {post.kind === "igem" && <span className="mb-1 block text-xs font-semibold text-violet-600">{t("feed.igemIntro")}</span>}
-        {post.content}
+        <FeedMentionText text={post.content} m={post} />
       </p>
       {post.image_url && (
         // eslint-disable-next-line @next/next/no-img-element

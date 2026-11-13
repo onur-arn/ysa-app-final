@@ -56,3 +56,17 @@ export const HOMETOWNS = [
   "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Şanlıurfa", "Şırnak",
   "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak",
 ]
+
+/** "@" groups in the feed: everyone holding one of these positions, in every station.
+ *  Same list as public.mention_group_positions() in supabase/schema.sql. */
+export const MENTION_GROUPS: { id: string; label: string; positions: readonly string[] }[] = [
+  { id: "board", label: "Yönetim Kurulu", positions: BOARD_POSITIONS },
+  { id: "exec", label: "Yürütme Kurulu", positions: EXECUTIVE_POSITIONS },
+  { id: "Başkan", label: "Başkanlar", positions: ["Başkan"] },
+  { id: "Sekreter", label: "Sekreterler", positions: ["Sekreter"] },
+  { id: "Sayman", label: "Saymanlar", positions: ["Sayman"] },
+  { id: "Proje Direktörü", label: "Proje Direktörleri", positions: ["Proje Direktörü"] },
+  { id: "Dış İlişkiler Direktörü", label: "Dış İlişkiler Direktörleri", positions: ["Dış İlişkiler Direktörü"] },
+  { id: "İç İlişkiler Direktörü", label: "İç İlişkiler Direktörleri", positions: ["İç İlişkiler Direktörü"] },
+  { id: "Kurumsal İletişim Direktörü", label: "Kurumsal İletişim Direktörleri", positions: ["Kurumsal İletişim Direktörü"] },
+]

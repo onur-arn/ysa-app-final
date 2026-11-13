@@ -48,6 +48,9 @@ export type Post = {
   file_name: string | null
   file_size: number | null
   pinned: boolean
+  mentions: string[]
+  mention_stations: string[]
+  mention_groups: string[]
   created_at: string
   post_likes: { user_id: string }[]
   post_comments: { id: string; author_id: string; content: string; created_at: string }[]
