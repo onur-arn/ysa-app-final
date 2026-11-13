@@ -99,6 +99,7 @@ export function ChatComposer({
     setText("")
     setMentions([])
     setQuery(null)
+    ref.current?.focus()   // keep the keyboard open for the next message
     void run({ kind: "text", content, mentions: ids })
   }
 
@@ -187,7 +188,7 @@ export function ChatComposer({
             className="max-h-32 min-h-11 flex-1 resize-none rounded-3xl border border-border bg-card px-4 py-2.5 text-[15px] outline-none focus:border-primary"
           />
           {text.trim() ? (
-            <button onClick={submit} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label={t("common.send")}>
+            <button onClick={submit} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label={t("common.send")}>
               <Send className="size-5" />
             </button>
           ) : (

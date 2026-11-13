@@ -76,6 +76,15 @@ export function ChatThread({ id }: { id: string }) {
     if (stick.current) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [messages.length, typers.length])
 
+  // The keyboard opening/closing resizes the list: stay on the latest message.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    const ro = new ResizeObserver(() => { if (stick.current) el.scrollTop = el.scrollHeight })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // On opening a conversation, land at the very bottom. Retry across frames so
   // late-loading media (images, audio players) can't leave the view above it.
   const booted = useRef<string | null>(null)
@@ -153,6 +162,11 @@ export function ChatThread({ id }: { id: string }) {
     const put = (fn: (old: Message[]) => Message[]) => qc.setQueryData<Message[]>(qk.messages(id), (old = []) => fn(old))
     put((old) => [...old, preview as Message])
     setReplyTo(null)
+    // land on the message just sent, even once the layout settles (keyboard, media)
+    const toBottom = () => { const el = scrollRef.current; if (el && stick.current) el.scrollTop = el.scrollHeight }
+    requestAnimationFrame(toBottom)
+    setTimeout(toBottom, 150)
+    setTimeout(toBottom, 400)
 
     try {
       if (o.kind === "image") row.attachment_url = await uploadMedia(await compressImage(o.file), me.id, "chat")
