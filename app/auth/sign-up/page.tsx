@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { AuthFooter, AuthShell } from "../auth-frame"
 import { Button } from "@/components/ui/button"
 import { PRIVACY_URL, TERMS_URL } from "@/components/legal/legal-page"
+import { formatName } from "@/lib/names"
 import { EXECUTIVE_POSITIONS, HOMETOWNS, boardPositionsFor, isIntlOnlyPosition } from "@/lib/constants"
 import { createClient } from "@/lib/supabase/client"
 import type { Station } from "@/lib/types"
@@ -85,7 +86,7 @@ export default function SignUpPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: f.email.trim(), password: f.password, first_name: f.first_name.trim(), last_name: f.last_name.trim(), phone: f.phone.trim(),
+        email: f.email.trim(), password: f.password, first_name: formatName(f.first_name), last_name: formatName(f.last_name), phone: f.phone.trim(),
         birthday: f.birthday, linkedin: f.linkedin.trim(), guest: f.guest, station_id: f.guest ? "" : f.station_id, position: f.guest ? null : f.position,
         igem_trained: f.igem === "evet", igem_date: f.igem === "evet" ? f.igem_date : "", hometown: f.hometown, photo_url: up.url,
       }),
@@ -166,8 +167,8 @@ function Step1({ f, set, photo, setPhoto, onNext }: StepProps & { photo: File | 
           <p className="text-[11px] font-medium text-muted-foreground">Fotoğraf zorunludur</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Ad" icon={User}><input required value={f.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Zeliha" autoComplete="given-name" className={field} /></Field>
-          <Field label="Soyad" icon={User}><input required value={f.last_name} onChange={(e) => set("last_name", e.target.value)} placeholder="Kılınç" autoComplete="family-name" className={field} /></Field>
+          <Field label="Ad" icon={User}><input required value={f.first_name} onChange={(e) => set("first_name", e.target.value)} onBlur={(e) => set("first_name", formatName(e.target.value))} placeholder="Zeliha" autoComplete="given-name" className={field} /></Field>
+          <Field label="Soyad" icon={User}><input required value={f.last_name} onChange={(e) => set("last_name", e.target.value)} onBlur={(e) => set("last_name", formatName(e.target.value))} placeholder="Kılınç" autoComplete="family-name" className={field} /></Field>
         </div>
         <Field label="E-posta" icon={Mail}><input type="email" required value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="uye@youthstation.org" autoComplete="email" className={field} /></Field>
         {!!taken && taken === f.email.trim().toLowerCase() && <p className="-mt-4 text-xs font-medium text-destructive">Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.</p>}

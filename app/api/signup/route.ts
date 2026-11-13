@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { notifyAdminsOfSignup } from "@/lib/server/signups"
 import { createAdminClient } from "@/lib/supabase/server"
 import { limited } from "@/lib/server/rate-limit"
+import { formatName } from "@/lib/names"
 
 type Body = Record<string, string | boolean | null | undefined>
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "")
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     password,
     email_confirm: true,
     user_metadata: {
-      first_name: str(b.first_name, 60), last_name: str(b.last_name, 60), phone: str(b.phone, 40), birthday: str(b.birthday, 10),
+      first_name: formatName(str(b.first_name, 60)), last_name: formatName(str(b.last_name, 60)), phone: str(b.phone, 40), birthday: str(b.birthday, 10),
       linkedin: str(b.linkedin, 300), guest, station_id: guest ? "" : str(b.station_id, 40), position: guest ? null : str(b.position, 100), hometown: str(b.hometown, 60),
       igem_trained: b.igem_trained === true, igem_date: str(b.igem_date, 10), photo_url: photo,
     },
