@@ -67,9 +67,14 @@ export function TaskDetail({ task, onClose, onEdit, onStatus }: { task: Task | n
         <div className="grid grid-cols-2 gap-3 rounded-2xl bg-secondary/60 p-3 text-xs">
           <div>
             <p className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">{t("tasks.assignee")}</p>
-            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-              {task.assign_all ? <><Users className="size-4 text-primary" /> {t("tasks.wholeTeam")}</> : task.assignee_id ? <><MemberAvatar id={task.assignee_id} size={24} showOnline={false} /> <span className={deletedClass(member(task.assignee_id))}>{member(task.assignee_id)?.full_name}</span></> : t("tasks.unassigned")}
-            </p>
+            {task.assign_all ? <p className="flex items-center gap-2 text-sm font-medium text-foreground"><Users className="size-4 text-primary" /> {t("tasks.wholeTeam")}</p>
+              : task.assignee_ids?.length ? (
+                <div className="flex flex-col gap-1.5">
+                  {task.assignee_ids.map((id) => (
+                    <p key={id} className="flex items-center gap-2 text-sm font-medium text-foreground"><MemberAvatar id={id} size={24} showOnline={false} /> <span className={deletedClass(member(id))}>{member(id)?.full_name}</span></p>
+                  ))}
+                </div>
+              ) : <p className="text-sm font-medium text-foreground">{t("tasks.unassigned")}</p>}
           </div>
           <div>
             <p className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">{t("tasks.assignedBy")}</p>

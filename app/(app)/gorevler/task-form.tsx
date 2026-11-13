@@ -26,7 +26,7 @@ export function TaskForm({ open, task, onClose }: { open: boolean; task?: Task; 
   useEffect(() => {
     if (!open) return
     setF(task
-      ? { title: task.title, description: task.description ?? "", priority: task.priority, station_id: task.station_id, due_date: task.due_date ?? "", assignee: task.assignee_id ? [task.assignee_id] : [], all: task.assign_all }
+      ? { title: task.title, description: task.description ?? "", priority: task.priority, station_id: task.station_id, due_date: task.due_date ?? "", assignee: task.assignee_ids ?? [], all: task.assign_all }
       : { title: "", description: "", priority: "normal", station_id: me.station_id === "intl" ? "paris" : me.station_id ?? "paris", due_date: "", assignee: [], all: false })
   }, [open, task, me.station_id])
 
@@ -35,7 +35,7 @@ export function TaskForm({ open, task, onClose }: { open: boolean; task?: Task; 
     setLoading(true)
     const row = {
       title: f.title.trim(), description: f.description.trim() || null, priority: f.priority, due_date: f.due_date || null,
-      station_id: intl ? f.station_id : me.station_id!, assignee_id: f.all ? null : f.assignee[0] ?? null, assign_all: f.all,
+      station_id: intl ? f.station_id : me.station_id!, assignee_ids: f.all ? [] : f.assignee, assignee_id: f.all ? null : f.assignee[0] ?? null, assign_all: f.all,
     }
     const supabase = createClient()
     const { error } = task ? await supabase.from("tasks").update(row).eq("id", task.id) : await supabase.from("tasks").insert({ ...row, created_by: me.id })
@@ -72,7 +72,6 @@ export function TaskForm({ open, task, onClose }: { open: boolean; task?: Task; 
           <MemberPicker
             value={f.all ? [] : f.assignee}
             onChange={(ids) => setF({ ...f, assignee: ids, all: false })}
-            multiple={false}
             stationFilter={target}
             allOption={{ selected: f.all, onSelect: () => setF({ ...f, all: !f.all, assignee: [] }) }}
           />

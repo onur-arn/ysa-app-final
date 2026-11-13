@@ -566,11 +566,13 @@ create table if not exists tasks (
   station_id   text not null references stations(id) on delete cascade,
   assignee_id  uuid references profiles(id) on delete set null,
   assign_all   boolean not null default false,    -- "Tüm ekip": the whole station
+  assignee_ids uuid[] not null default '{}',      -- several assignees; assignee_id = assignee_ids[1]
   created_by   uuid references profiles(id) on delete set null,
   due_date     date,
   completed_at timestamptz,
   created_at   timestamptz not null default now()
 );
+alter table tasks add column if not exists assignee_ids uuid[] not null default '{}';
 create table if not exists task_comments (
   id         uuid primary key default gen_random_uuid(),
   task_id    uuid not null references tasks(id) on delete cascade,
@@ -608,11 +610,31 @@ create policy "tcomments delete" on task_comments for delete to authenticated us
 create or replace function public.tasks_before() returns trigger language plpgsql as $$
 begin
   new.completed_at := case when new.status = 'done' then coalesce(new.completed_at, now()) else null end;
-  if new.assign_all then new.assignee_id := null; end if;
+  if new.assign_all then
+    new.assignee_ids := '{}';
+  elsif tg_op = 'INSERT' then
+    if cardinality(new.assignee_ids) = 0 and new.assignee_id is not null then new.assignee_ids := array[new.assignee_id]; end if;
+  elsif new.assignee_ids is not distinct from old.assignee_ids and new.assignee_id is distinct from old.assignee_id then
+    -- an older client writing assignee_id only, or a deleted profile (on delete set null)
+    new.assignee_ids := case when new.assignee_id is null then array_remove(old.assignee_ids, old.assignee_id) else array[new.assignee_id] end;
+  end if;
+  new.assignee_ids := array(select u from unnest(new.assignee_ids) with ordinality as x(u, n) where u is not null group by u order by min(n));
+  new.assignee_id := new.assignee_ids[1];
   return new;
 end $$;
 drop trigger if exists tasks_before on tasks;
 create trigger tasks_before before insert or update on tasks for each row execute function public.tasks_before();
+
+-- a deleted account leaves the assignee lists
+create or replace function public.tasks_drop_assignee() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update tasks set assignee_ids = array_remove(assignee_ids, old.id) where old.id = any(assignee_ids);
+  return null;
+end $$;
+drop trigger if exists tasks_drop_assignee on profiles;
+create trigger tasks_drop_assignee after delete on profiles for each row execute function public.tasks_drop_assignee();
+
 
 -- ── MESSAGING ───────────────────────────────────────────────────────────────
 create table if not exists conversations (
@@ -975,12 +997,12 @@ create policy "votes own"  on poll_votes for all to authenticated using (user_id
   with check (user_id = auth.uid() and public.can_see_poll(poll_id));
 
 -- ── NOTIFICATION TRIGGERS ───────────────────────────────────────────────────
--- Görev: the assignee, or the whole station for "Tüm ekip".
+-- Görev: every newly added assignee, or the whole station for "Tüm ekip".
 create or replace function public.tasks_notify() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare actor text;
 begin
-  if not (tg_op = 'INSERT' or new.assignee_id is distinct from old.assignee_id or new.assign_all is distinct from old.assign_all) then
+  if not (tg_op = 'INSERT' or new.assignee_ids is distinct from old.assignee_ids or new.assign_all is distinct from old.assign_all) then
     return null;
   end if;
   select full_name into actor from profiles where id = new.created_by;
@@ -988,7 +1010,8 @@ begin
   select p.id, 'task', 'Yeni görev', new.title || coalesce(' · ' || actor, ''), '/gorevler?open=' || new.id, new.created_by
     from profiles p
    where p.status = 'active' and p.id is distinct from auth.uid() and public.wants(p.id, 'tasks')
-     and ((new.assign_all and p.station_id = new.station_id) or p.id = new.assignee_id);
+     and ((new.assign_all and p.station_id = new.station_id and (tg_op = 'INSERT' or not old.assign_all))
+       or (p.id = any(new.assignee_ids) and (tg_op = 'INSERT' or not p.id = any(old.assignee_ids))));
   return null;
 end $$;
 drop trigger if exists tasks_notify on tasks;
@@ -1103,13 +1126,14 @@ create trigger points_event after insert or delete on events        for each row
 create trigger points_vote after insert or delete on poll_votes    for each row execute function public.points_simple();
 create trigger points_tcomment after insert or delete on task_comments for each row execute function public.points_simple();
 
--- A finished görev rewards its assignee ("Tüm ekip" tasks: shared, no individual points).
+-- A finished görev rewards each assignee ("Tüm ekip" tasks: shared, no individual points).
 create or replace function public.points_task_done() returns trigger language plpgsql security definer set search_path = public as $$
+declare u uuid;
 begin
   if new.status = 'done' and old.status <> 'done' then
-    perform public.add_points(new.assignee_id, 10);
+    foreach u in array new.assignee_ids loop perform public.add_points(u, 10); end loop;
   elsif old.status = 'done' and new.status <> 'done' then
-    perform public.add_points(old.assignee_id, -10);
+    foreach u in array old.assignee_ids loop perform public.add_points(u, -10); end loop;
   end if;
   return null;
 end $$;
@@ -1129,7 +1153,7 @@ begin
     + (select count(*) * 5 from events x where x.created_by = p.id)
     + (select count(*) from poll_votes x where x.user_id = p.id)
     + (select count(*) from task_comments x where x.author_id = p.id)
-    + (select count(*) * 10 from tasks x where x.status = 'done' and x.assignee_id = p.id)
+    + (select count(*) * 10 from tasks x where x.status = 'done' and p.id = any(x.assignee_ids))
   where true;   -- Supabase's safeupdate refuses an UPDATE without WHERE
   perform set_config('ysa.trusted', 'off', true);
 end $$;

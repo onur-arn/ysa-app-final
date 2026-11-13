@@ -45,7 +45,12 @@ export function TaskCard({ task, showStation, onClick, onCycle }: { task: Task; 
           {comments > 0 && <span className="flex items-center gap-1"><MessageSquare className="size-3.5" /> {comments}</span>}
           <span className="ml-auto">
             {task.assign_all ? <span className="flex items-center gap-1 font-semibold text-primary"><Users className="size-3.5" /> {t("tasks.wholeTeam")}</span>
-              : task.assignee_id ? <MemberAvatar id={task.assignee_id} size={22} showOnline={false} /> : <span className="italic">{t("tasks.unassigned")}</span>}
+              : task.assignee_ids?.length ? (
+                <span className="flex items-center">
+                  {task.assignee_ids.slice(0, 3).map((id, i) => <MemberAvatar key={id} id={id} size={22} showOnline={false} className={cn("rounded-full ring-2 ring-card", i > 0 && "-ml-1.5")} />)}
+                  {task.assignee_ids.length > 3 && <span className="ml-1 font-semibold">+{task.assignee_ids.length - 3}</span>}
+                </span>
+              ) : <span className="italic">{t("tasks.unassigned")}</span>}
           </span>
         </div>
       </button>

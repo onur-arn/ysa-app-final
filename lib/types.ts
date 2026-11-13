@@ -91,7 +91,8 @@ export type Task = {
   status: TaskStatus
   priority: TaskPriority
   station_id: string
-  assignee_id: string | null
+  assignee_id: string | null   // first of assignee_ids
+  assignee_ids: string[]
   assign_all: boolean
   created_by: string | null
   due_date: string | null
