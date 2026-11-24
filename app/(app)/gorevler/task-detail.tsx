@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { CalendarClock, Pencil, Send, Trash2, Users } from "lucide-react"
 import { useState } from "react"
@@ -71,14 +72,14 @@ export function TaskDetail({ task, onClose, onEdit, onStatus }: { task: Task | n
               : task.assignee_ids?.length ? (
                 <div className="flex flex-col gap-1.5">
                   {task.assignee_ids.map((id) => (
-                    <p key={id} className="flex items-center gap-2 text-sm font-medium text-foreground"><MemberAvatar id={id} size={24} showOnline={false} /> <span className={deletedClass(member(id))}>{member(id)?.full_name}</span></p>
+                    <ProfileLink key={id} id={id} className="flex items-center gap-2 text-sm font-medium text-foreground"><MemberAvatar id={id} size={24} showOnline={false} /> <span className={deletedClass(member(id))}>{member(id)?.full_name}</span></ProfileLink>
                   ))}
                 </div>
               ) : <p className="text-sm font-medium text-foreground">{t("tasks.unassigned")}</p>}
           </div>
           <div>
             <p className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">{t("tasks.assignedBy")}</p>
-            <p className="flex items-center gap-2 text-sm font-medium text-foreground"><MemberAvatar id={task.created_by} size={24} showOnline={false} /> <span className={deletedClass(member(task.created_by))}>{member(task.created_by)?.full_name ?? "—"}</span></p>
+            <ProfileLink id={task.created_by} className="flex items-center gap-2 text-sm font-medium text-foreground"><MemberAvatar id={task.created_by} size={24} showOnline={false} /> <span className={deletedClass(member(task.created_by))}>{member(task.created_by)?.full_name ?? "—"}</span></ProfileLink>
           </div>
         </div>
         {task.description && <p className="whitespace-pre-wrap text-sm text-foreground">{task.description}</p>}
@@ -89,9 +90,9 @@ export function TaskDetail({ task, onClose, onEdit, onStatus }: { task: Task | n
               const a = member(c.author_id)
               return (
                 <div key={c.id} className="flex gap-2.5">
-                  <Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={28} />
+                  <ProfileLink id={c.author_id} className="shrink-0"><Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={28} /></ProfileLink>
                   <div className="min-w-0 flex-1 rounded-2xl bg-secondary/70 px-3 py-2">
-                    <p className="text-xs font-semibold text-foreground"><span className={deletedClass(a)}>{a?.full_name}</span> <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span></p>
+                    <p className="text-xs font-semibold text-foreground"><ProfileLink id={c.author_id} className={deletedClass(a)}>{a?.full_name}</ProfileLink> <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span></p>
                     <p className="whitespace-pre-wrap text-sm text-foreground">{c.content}</p>
                   </div>
                 </div>

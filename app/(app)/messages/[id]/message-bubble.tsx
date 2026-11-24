@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Forward, Heart, Pin, Trash2, Users } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
@@ -139,7 +140,7 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
       transition={{ type: "spring", stiffness: 420, damping: 32 }}
       className={cn("msg-row group flex items-end gap-2", mine ? "justify-end" : "justify-start", firstOfGroup ? "mt-3" : "mt-[3px]", likes.length > 0 && "mb-2.5")}
     >
-      {!mine && isGroup && <span className="w-8 shrink-0">{lastOfGroup && <MemberAvatar id={m.sender_id} size={32} showOnline={false} />}</span>}
+      {!mine && isGroup && <span className="w-8 shrink-0">{lastOfGroup && <ProfileLink id={m.sender_id}><MemberAvatar id={m.sender_id} size={32} showOnline={false} /></ProfileLink>}</span>}
       <div className={cn("relative max-w-[78%]", highlight && "animate-pulse")}>
         <div
           {...longPress}
@@ -157,7 +158,7 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
         >
           {!mine && isGroup && firstOfGroup && (
             <p className={cn("mb-0.5 text-[12px] font-bold", media && "px-3.5 pt-2", deletedClass(sender))} style={{ color: `hsl(${color})` }}>
-              {sender?.full_name ?? t("common.formerMember")}
+              <ProfileLink id={m.sender_id}>{sender?.full_name ?? t("common.formerMember")}</ProfileLink>
               <span className="ml-1.5 text-[10px] font-semibold opacity-70">{station(sender?.station_id)?.short}</span>
             </p>
           )}
@@ -273,14 +274,14 @@ export function LikersList({ ids }: { ids: string[] }) {
       {ids.map((id) => {
         const p = member(id)
         return (
-          <div key={id} className="flex items-center gap-3 rounded-2xl px-1 py-1.5">
+          <ProfileLink key={id} id={id} className="flex items-center gap-3 rounded-2xl px-1 py-1.5 active:bg-secondary">
             <MemberAvatar id={id} size={40} showOnline={false} />
             <span className="min-w-0 flex-1">
               <span className={cn("block truncate text-[15px] font-medium text-foreground", deletedClass(p))}>{p?.full_name ?? t("common.formerMember")}</span>
               {p && <span className="block truncate text-xs text-muted-foreground">{station(p.station_id)?.name ?? ""}</span>}
             </span>
             <Heart className="size-4 shrink-0 fill-red-500 text-red-500" />
-          </div>
+          </ProfileLink>
         )
       })}
     </div>

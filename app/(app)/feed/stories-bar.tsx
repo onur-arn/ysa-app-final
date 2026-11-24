@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Eye, Flag, Heart, Loader2, Music, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react"
@@ -199,11 +200,14 @@ export function StoriesBar() {
                   ))}
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-white">
-                  <Avatar name={author?.full_name} photoUrl={author?.photo_url} stationId={author?.station_id} size={32} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{author?.full_name} <span className="font-normal text-white/70">· {station(author?.station_id)?.city}</span></span>
-                    <span className="block text-[11px] text-white/70">{fmtRelative(current.created_at)}</span>
-                  </span>
+                  {/* tap the author: close the story, then open the profile (it would sit behind the viewer) */}
+                  <ProfileLink id={current.author_id} before={() => setViewer(null)} className="flex min-w-0 items-center gap-2">
+                    <Avatar name={author?.full_name} photoUrl={author?.photo_url} stationId={author?.station_id} size={32} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{author?.full_name} <span className="font-normal text-white/70">· {station(author?.station_id)?.city}</span></span>
+                      <span className="block text-[11px] text-white/70">{fmtRelative(current.created_at)}</span>
+                    </span>
+                  </ProfileLink>
                   <div className="ml-auto flex items-center gap-1">
                     {current.music_preview_url && (
                       <button onClick={() => setMuted((v) => !v)} className="flex size-9 items-center justify-center rounded-full hover:bg-white/10" aria-label="sound">
@@ -260,14 +264,14 @@ export function StoriesBar() {
         ) : (
           <div className="flex flex-col gap-2">
             {viewers?.map((v) => (
-              <div key={v.user_id} className="flex items-center gap-3">
+              <ProfileLink key={v.user_id} id={v.user_id} before={() => { setViewers(null); setViewer(null); setPaused(false) }} className="flex items-center gap-3">
                 <MemberAvatar id={v.user_id} size={34} showOnline={false} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-foreground">{member(v.user_id)?.full_name ?? t("common.formerMember")}</span>
                   <span className="block text-[11px] text-muted-foreground">{fmtDate(v.viewed_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                 </span>
                 {v.liked && <Heart className="size-4 shrink-0 fill-red-500 text-red-500" />}
-              </div>
+              </ProfileLink>
             ))}
           </div>
         )}

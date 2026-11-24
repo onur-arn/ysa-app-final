@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Flag, GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
@@ -102,7 +103,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
         {header}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className={cn("truncate text-sm font-semibold text-foreground", deletedClass(author))}>{post.kind === "welcome" ? "YouthStation" : author?.full_name ?? t("common.formerMember")}</p>
+            <p className={cn("truncate text-sm font-semibold text-foreground", deletedClass(author))}>{post.kind === "welcome" ? "YouthStation" : <ProfileLink id={post.author_id}>{author?.full_name ?? t("common.formerMember")}</ProfileLink>}</p>
             {post.kind === "igem" && <Pill tone="violet"><GraduationCap className="size-3" /> {t("feed.igem")}</Pill>}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
@@ -179,10 +180,10 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
             const a = member(c.author_id)
             return (
               <div key={c.id} className="flex gap-2.5">
-                <Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={28} />
+                <ProfileLink id={c.author_id} className="shrink-0"><Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={28} /></ProfileLink>
                 <div className="group min-w-0 flex-1 rounded-2xl bg-secondary/70 px-3 py-2">
                   <p className="flex items-center gap-1 text-xs font-semibold text-foreground">
-                    <span className={deletedClass(a)}>{a?.full_name}</span> <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span>
+                    <ProfileLink id={c.author_id} className={deletedClass(a)}>{a?.full_name}</ProfileLink> <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span>
                     {(c.author_id === me.id || isBoard(me)) && (
                       <button onClick={() => removeComment(c.id)} className="ml-auto text-muted-foreground opacity-60 hover:text-destructive group-hover:opacity-100" aria-label={t("common.delete")}><Trash2 className="size-3" /></button>
                     )}

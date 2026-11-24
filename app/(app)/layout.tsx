@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { AppShell } from "@/components/shell/app-shell"
 import { AppProvider } from "@/components/providers/app-context"
 import { ImageViewerProvider } from "@/components/image-viewer"
+import { ProfileProvider } from "@/components/profile/profile-link"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { RealtimeHub } from "@/lib/realtime/hub"
 import { PaletteScope } from "@/lib/theme/context"
@@ -25,7 +26,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <RealtimeHub>
           <PaletteScope />
           <ImageViewerProvider>
-            <AppShell>{children}</AppShell>
+            <ProfileProvider>
+              <AppShell>{children}</AppShell>
+            </ProfileProvider>
           </ImageViewerProvider>
         </RealtimeHub>
       </AppProvider>

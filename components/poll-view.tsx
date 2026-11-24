@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { Check, Users } from "lucide-react"
 import { useState } from "react"
 import { AvatarStack, MemberAvatar } from "@/components/avatar"
@@ -89,10 +90,10 @@ export function PollView({ poll, onChanged, inverted }: { poll: Poll; onChanged:
                 ) : (
                   <div className="flex flex-col gap-1.5">
                     {vs.map((v) => (
-                      <div key={v.user_id} className="flex items-center gap-2">
+                      <ProfileLink key={v.user_id} id={v.user_id} className="flex items-center gap-2">
                         <MemberAvatar id={v.user_id} size={26} showOnline={false} />
                         <span className="truncate text-sm text-foreground">{member(v.user_id)?.full_name ?? t("common.formerMember")}</span>
-                      </div>
+                      </ProfileLink>
                     ))}
                   </div>
                 )}

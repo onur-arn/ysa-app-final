@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { CalendarPlus, Clock, ExternalLink, Lock, MapPin, Pencil, Trash2 } from "lucide-react"
 import { MemberAvatar } from "@/components/avatar"
@@ -75,7 +76,7 @@ export function EventDetail({ event, onClose, onEdit }: { event: AppEvent | null
         {event.link && <a href={event.link} target="_blank" rel="noreferrer" className="flex items-start gap-2.5 break-all text-primary"><ExternalLink className="mt-0.5 size-4 shrink-0" /> {event.link}</a>}
         {event.description && <p className="whitespace-pre-wrap rounded-2xl bg-secondary/60 p-3 text-foreground">{event.description}</p>}
         {event.created_by && (
-          <p className="flex items-center gap-2 text-xs text-muted-foreground"><MemberAvatar id={event.created_by} size={22} showOnline={false} /> {t("agenda.createdBy", { name: member(event.created_by)?.full_name ?? "" })}</p>
+          <ProfileLink id={event.created_by} className="flex items-center gap-2 text-xs text-muted-foreground"><MemberAvatar id={event.created_by} size={22} showOnline={false} /> {t("agenda.createdBy", { name: member(event.created_by)?.full_name ?? "" })}</ProfileLink>
         )}
         <div className="flex flex-wrap gap-2 pt-1">
           <Button variant="secondary" size="sm" onClick={() => downloadIcs(event)}><CalendarPlus className="size-4" /> {t("agenda.addToCalendar")}</Button>

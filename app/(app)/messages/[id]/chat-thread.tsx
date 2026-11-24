@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowDown, ArrowLeft, Pin, Users, X } from "lucide-react"
 import Link from "next/link"
@@ -313,7 +314,7 @@ export function ChatThread({ id }: { id: string }) {
               const color = station(member(uid)?.station_id)?.color
               return (
                 <div key={uid} className="flex items-end gap-2">
-                  {isGroup && <MemberAvatar id={uid} size={28} showOnline={false} />}
+                  {isGroup && <ProfileLink id={uid}><MemberAvatar id={uid} size={28} showOnline={false} /></ProfileLink>}
                   <span
                     className="flex items-center gap-1 rounded-3xl rounded-bl-lg bg-card px-4 py-3 shadow-sm ring-1 ring-border/60"
                     style={isGroup && color ? { boxShadow: `inset 3px 0 0 hsl(${color})` } : undefined}
