@@ -176,7 +176,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "mod.kind.task": ["Görev","Tâche","Task"],
   "mod.status.resolved": ["çözüldü","résolu","resolved"],
   "mod.status.dismissed": ["reddedildi","rejeté","dismissed"],
-  "mod.banner": ["🛡️ Moderatör görünümü — bu konuşma şikayet üzerine açıldı ve kaydedildi.","🛡️ Vue modérateur — conversation ouverte suite à un signalement et enregistrée.","🛡️ Moderator view — opened from a report and logged."],
+  "mod.banner": ["🛡️ Moderatör görünümü — bu konuşma şikayet üzerine açıldı.","🛡️ Vue modérateur — conversation ouverte suite à un signalement.","🛡️ Moderator view — opened from a report."],
 
   "feed.igemIntro": ["Bu yönetici bir iGEM düzenlemek istiyor.","Ce yönetici souhaite organiser un iGEM.","This board member wants to organise an iGEM."],
   "feed.newPost": ["Yeni paylaşım","Nouvelle publication","New post"],
