@@ -1,5 +1,6 @@
 "use client"
 
+import { ProfileLink } from "@/components/profile/profile-link"
 import { type ReactNode } from "react"
 import { useApp } from "@/components/providers/app-context"
 import { MENTION_GROUPS } from "@/lib/constants"
@@ -8,7 +9,7 @@ import { isDeleted } from "@/lib/members"
 import { findMentions, type MentionTarget } from "@/lib/mentions"
 import { cn } from "@/lib/utils"
 
-type Tag = { color?: string; mine?: boolean }
+type Tag = { color?: string; mine?: boolean; id?: string }
 
 /** Everything that can be tagged right now: members, stations, position groups. */
 export function useMentionTargets(): MentionTarget<Tag & { kind: string }>[] {
@@ -18,7 +19,7 @@ export function useMentionTargets(): MentionTarget<Tag & { kind: string }>[] {
     ...MENTION_GROUPS.map((g) => ({ label: g.label, value: { kind: "group", mine: g.positions.includes(me.position ?? "") } })),
     ...stations.map((s) => ({ label: s.name, value: { kind: "station", color: s.color, mine: s.id === me.station_id } })),
     ...members.filter((m) => !isDeleted(m) && m.status === "active")
-      .map((m) => ({ label: m.full_name, value: { kind: "member", color: station(m.station_id)?.color, mine: m.id === me.id } })),
+      .map((m) => ({ label: m.full_name, value: { kind: "member", id: m.id, color: station(m.station_id)?.color, mine: m.id === me.id } })),
   ]
 }
 
@@ -32,11 +33,13 @@ export function FeedMentionText({ text }: { text: string }) {
   for (const h of findMentions(text, targets)) {
     parts.push(chars.slice(last, h.start).join(""))
     const color = h.target.value.color ?? "188 57% 48%"
-    parts.push(
-      <span key={h.start} className={cn("rounded-md px-1 font-semibold", h.target.value.mine && "ring-1 ring-current")} style={{ color: `hsl(${color})`, backgroundColor: `hsl(${color} / 0.12)` }}>
+    const tag = (
+      <span className={cn("rounded-md px-1 font-semibold", h.target.value.mine && "ring-1 ring-current")} style={{ color: `hsl(${color})`, backgroundColor: `hsl(${color} / 0.12)` }}>
         @{h.target.label}
-      </span>,
+      </span>
     )
+    // a tagged member opens their profile
+    parts.push(h.target.value.kind === "member" ? <ProfileLink key={h.start} id={h.target.value.id}>{tag}</ProfileLink> : <span key={h.start}>{tag}</span>)
     last = h.end
   }
   parts.push(chars.slice(last).join(""))

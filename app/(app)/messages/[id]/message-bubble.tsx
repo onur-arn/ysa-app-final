@@ -38,13 +38,14 @@ export function MentionText({ text, mentions, inverted }: { text: string; mentio
     const who = people.find((p) => p.full_name === m[1])!
     const color = station(who.station_id)?.color ?? "188 57% 48%"
     parts.push(
-      <span
-        key={m.index}
-        className={cn("rounded-md px-1 font-semibold", who.id === me.id && "ring-1 ring-current")}
-        style={inverted ? { backgroundColor: "rgb(255 255 255 / 0.22)" } : { color: `hsl(${color})`, backgroundColor: `hsl(${color} / 0.12)` }}
-      >
-        @{m[1]}
-      </span>,
+      <ProfileLink key={m.index} id={who.id}>
+        <span
+          className={cn("rounded-md px-1 font-semibold", who.id === me.id && "ring-1 ring-current")}
+          style={inverted ? { backgroundColor: "rgb(255 255 255 / 0.22)" } : { color: `hsl(${color})`, backgroundColor: `hsl(${color} / 0.12)` }}
+        >
+          @{m[1]}
+        </span>
+      </ProfileLink>,
     )
     last = m.index! + m[0].length
   }

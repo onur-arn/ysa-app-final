@@ -12,6 +12,23 @@ const writePref = (v: "on" | "off") => { try { localStorage.setItem(NATIVE_PREF,
 let nativeToken: string | null = null
 let nativeReady = false
 
+// Tapping a notification opens its page with the app's router (no full reload). If the tap
+// launched the app, the destination waits until the router is ready.
+let navigate: ((url: string) => void) | null = null
+let pendingUrl: string | null = null
+export function setPushNavigator(fn: ((url: string) => void) | null) {
+  navigate = fn
+  if (fn && pendingUrl) {
+    const url = pendingUrl
+    pendingUrl = null
+    fn(url)
+  }
+}
+function openFromNotification(url: string) {
+  if (navigate) navigate(url)
+  else pendingUrl = url
+}
+
 function requestNativeToken() {
   return new Promise<string | null>((resolve) => {
     void (async () => {
@@ -54,7 +71,7 @@ export async function initNativePush() {
   nativeReady = true
   await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
     const url = (notification.data as { url?: unknown } | undefined)?.url
-    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("//")) window.location.assign(url)
+    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("//")) openFromNotification(url)
   })
   const pref = readPref()
   if (pref === "off") return

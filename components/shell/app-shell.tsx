@@ -11,7 +11,7 @@ import { useMemberMap, useNotifications } from "@/lib/data/hooks"
 import { useI18n } from "@/lib/i18n/context"
 import { PAGE_TITLES } from "@/lib/nav"
 import { NOTIFY_EVENT } from "@/lib/realtime/hub"
-import { initNativePush, registerServiceWorker } from "@/lib/push"
+import { initNativePush, registerServiceWorker, setPushNavigator } from "@/lib/push"
 import type { Notification } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { BottomNav } from "./bottom-nav"
@@ -38,6 +38,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => void registerServiceWorker(), [])
   useEffect(() => void initNativePush(), [])
+  useEffect(() => {
+    setPushNavigator((url) => router.push(url))
+    return () => setPushNavigator(null)
+  }, [router])
 
   // Live alert for new notifications, wherever you are in the app.
   useEffect(() => {
