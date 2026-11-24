@@ -24,6 +24,7 @@ import type { ConversationRow, Message, Notification } from "@/lib/types"
 import { compressImage, uploadFile, uploadMedia } from "@/lib/upload"
 import { cn, isSameDay } from "@/lib/utils"
 import { ChatComposer, type Outgoing } from "./chat-composer"
+import { useKeyboardViewport } from "@/lib/use-keyboard-viewport"
 import { ConversationInfo } from "./conversation-info"
 import { MessageBubble, type BubbleAction } from "./message-bubble"
 import { ForwardSheet } from "@/components/forward-sheet"
@@ -43,6 +44,7 @@ export function ChatThread({ id }: { id: string }) {
   const [hasMore, setHasMore] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
   const [forward, setForward] = useState<Message | null>(null)
+  const viewportHeight = useKeyboardViewport()
   const scrollRef = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const supabase = createClient()
@@ -238,7 +240,7 @@ export function ChatThread({ id }: { id: string }) {
     : isGroup ? t("messages.membersCount", { n: memberIds.length }) : otherOnline ? t("common.online") : other?.position ?? ""
 
   return (
-    <div className="flex h-dvh flex-col md:h-[calc(100dvh-61px)]">
+    <div className="flex h-dvh flex-col md:h-[calc(100dvh-61px)]" style={viewportHeight ? { height: viewportHeight } : undefined}>
       {/* header */}
       <div className="relative z-10 flex items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl">
         <Link href="/messages" className="flex size-10 items-center justify-center rounded-full hover:bg-secondary" aria-label="back"><ArrowLeft className="size-5" /></Link>
