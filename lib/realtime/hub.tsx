@@ -100,7 +100,20 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
           setTyping((t) => (t[conv]?.[(p.new as Message).sender_id ?? ""] ? { ...t, [conv]: { ...t[conv], [(p.new as Message).sender_id!]: 0 } } : t))
           if ((p.new as Message).kind === "poll") void qc.invalidateQueries({ queryKey: qk.polls((p.new as Message).id) })
         })
-        .on("postgres_changes", { event: "*", schema: "public", table: "message_likes" }, () => void qc.invalidateQueries({ queryKey: ["messages"] }))
+        // A like only changes one message: patch it in place (a refetch would drop the older pages
+        // already loaded and make the conversation jump).
+        .on("postgres_changes", { event: "*", schema: "public", table: "message_likes" }, (p) => {
+          const row = (p.eventType === "DELETE" ? p.old : p.new) as { message_id?: string; user_id?: string }
+          if (!row.message_id || !row.user_id) return void qc.invalidateQueries({ queryKey: ["messages"] })
+          qc.setQueriesData<Message[]>({ queryKey: ["messages"] }, (old) => {
+            if (!Array.isArray(old) || !old.some((m) => m.id === row.message_id)) return old
+            return old.map((m) => {
+              if (m.id !== row.message_id) return m
+              const likes = (m.message_likes ?? []).filter((l) => l.user_id !== row.user_id)
+              return { ...m, message_likes: p.eventType === "DELETE" ? likes : [...likes, { user_id: row.user_id! }] }
+            })
+          })
+        })
       .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, (p) => {
           const row = (p.new ?? p.old) as { conversation_id?: string }
           refreshConvs()

@@ -125,7 +125,7 @@ export function ChatComposer({
   }
 
   return (
-    <div className="relative border-t border-border/60 bg-background px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+    <div className="relative border-t border-border/50 bg-background/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
       <AnimatePresence>
         {candidates.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="absolute inset-x-3 bottom-full mb-2 overflow-hidden rounded-2xl border border-border bg-popover p-1 shadow-2xl">
@@ -141,7 +141,7 @@ export function ChatComposer({
       </AnimatePresence>
 
       {replyTo && (
-        <div className="mb-2 flex items-center gap-2 rounded-xl bg-secondary px-3 py-1.5 text-xs">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border-l-[3px] border-primary bg-secondary px-3 py-1.5 text-xs">
           <CornerUpLeft className="size-3.5 shrink-0 text-primary" />
           <span className="min-w-0 flex-1 truncate"><b>{member(replyTo.sender_id)?.full_name}</b> · {replyTo.content ?? replyTo.attachment_name ?? t(`messages.kind.${replyTo.kind}`)}</span>
           <button onClick={onCancelReply} aria-label="cancel"><X className="size-3.5" /></button>

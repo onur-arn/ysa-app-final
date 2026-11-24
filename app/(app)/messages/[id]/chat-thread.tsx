@@ -24,7 +24,8 @@ import { compressImage, uploadFile, uploadMedia } from "@/lib/upload"
 import { cn, isSameDay } from "@/lib/utils"
 import { ChatComposer, type Outgoing } from "./chat-composer"
 import { ConversationInfo } from "./conversation-info"
-import { MessageBubble } from "./message-bubble"
+import { MessageBubble, type BubbleAction } from "./message-bubble"
+import { ForwardSheet } from "@/components/forward-sheet"
 
 export function ChatThread({ id }: { id: string }) {
   const { me, station } = useApp()
@@ -40,6 +41,7 @@ export function ChatThread({ id }: { id: string }) {
   const [highlight, setHighlight] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
+  const [forward, setForward] = useState<Message | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const supabase = createClient()
@@ -88,9 +90,11 @@ export function ChatThread({ id }: { id: string }) {
   // On opening a conversation, land at the very bottom. Retry across frames so
   // late-loading media (images, audio players) can't leave the view above it.
   const booted = useRef<string | null>(null)
+  const bootedAt = useRef(Number.POSITIVE_INFINITY)
   useEffect(() => {
     if (!messages.length || booted.current === id) return
     booted.current = id
+    bootedAt.current = Date.now()
     stick.current = true
     setAtBottom(true)
     const toBottom = () => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight }
@@ -194,6 +198,22 @@ export function ChatThread({ id }: { id: string }) {
     await supabase.from("messages").update({ deleted_at: new Date().toISOString(), content: null, attachment_url: null }).eq("id", m.id)
   }
 
+  // One stable callback for every bubble (lets React skip re-rendering unchanged bubbles).
+  const handlers = useRef({ setReplyTo, pin, remove, jump, setForward })
+  handlers.current = { setReplyTo, pin, remove, jump, setForward }
+  const onAction = useCallback((action: BubbleAction, m: Message, target?: string) => {
+    const h = handlers.current
+    if (action === "reply") h.setReplyTo(m)
+    else if (action === "pin") void h.pin(m.id)
+    else if (action === "delete") void h.remove(m)
+    else if (action === "jump" && target) h.jump(target)
+    else if (action === "forward") h.setForward(m)
+  }, [])
+  const onMediaLoad = useCallback(() => {
+    const el = scrollRef.current
+    if (el && stick.current) el.scrollTop = el.scrollHeight
+  }, [])
+
   if (isError) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center">
@@ -243,7 +263,7 @@ export function ChatThread({ id }: { id: string }) {
       )}
 
       {/* messages */}
-      <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto overscroll-contain px-3 pb-3 pt-2">
+      <div ref={scrollRef} onScroll={onScroll} className="chat-bg relative flex-1 select-none overflow-y-auto overscroll-contain px-3 pb-4 pt-2 [-webkit-touch-callout:none]">
         {isPending && messages.length === 0 ? (
           <div className="flex flex-col gap-3 pt-4">
             {[50, 70, 40, 60].map((w, i) => <div key={i} className={cn("h-10 animate-pulse rounded-3xl bg-secondary", i % 2 ? "self-end" : "self-start")} style={{ width: `${w}%` }} />)}
@@ -257,8 +277,8 @@ export function ChatThread({ id }: { id: string }) {
             return (
               <div key={m.id}>
                 {newDay && (
-                  <div className="my-3 flex justify-center">
-                    <span className="rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-muted-foreground">{fmtDate(m.created_at, { weekday: "long", day: "numeric", month: "long" })}</span>
+                  <div className="sticky top-1 z-[5] my-3 flex justify-center">
+                    <span className="rounded-full border border-border/50 bg-background/80 px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-sm backdrop-blur-md">{fmtDate(m.created_at, { weekday: "long", day: "numeric", month: "long" })}</span>
                   </div>
                 )}
                 <MessageBubble
@@ -270,10 +290,9 @@ export function ChatThread({ id }: { id: string }) {
                   canPin={isIntl(me)}
                   readByOther={!isGroup && !!otherRead && otherRead >= m.created_at}
                   highlight={highlight === m.id}
-                  onReply={() => setReplyTo(m)}
-                  onPin={() => pin(m.id)}
-                  onDelete={() => remove(m)}
-                  onJump={jump}
+                  isNew={new Date(m.created_at).getTime() > bootedAt.current}
+                  onAction={onAction}
+                  onMediaLoad={onMediaLoad}
                 />
               </div>
             )
@@ -313,6 +332,7 @@ export function ChatThread({ id }: { id: string }) {
         <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />
       )}
 
+      <ForwardSheet message={forward} onClose={() => setForward(null)} />
       {conv && <ConversationInfo open={info} onClose={() => setInfo(false)} conv={conv} onOpenProfile={(uid) => { setInfo(false); setProfile(uid) }} />}
       <ProfileSheet memberId={profile} onClose={() => setProfile(null)} />
     </div>

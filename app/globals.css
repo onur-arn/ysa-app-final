@@ -207,3 +207,13 @@ input[type="time"]::-webkit-date-and-time-value {
 
 /* splash already seen this session: hide it before first paint */
 .no-splash #splash { display: none; }
+
+/* Fond des conversations : léger dégradé teinté + trame de points, discrets dans les deux thèmes. */
+.chat-bg {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--foreground) 7%, transparent) 1px, transparent 0),
+    linear-gradient(180deg, color-mix(in oklch, var(--primary) 6%, transparent), transparent 40%);
+  background-size: 22px 22px, 100% 100%;
+  background-attachment: local, scroll;
+}

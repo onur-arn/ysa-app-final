@@ -4,6 +4,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Flag, GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useImageViewer } from "@/components/image-viewer"
+import { Sheet } from "@/components/ui/sheet"
+import { LikersList } from "@/app/(app)/messages/[id]/message-bubble"
 import { FeedMentionText } from "@/components/feed-mentions"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { FileChip } from "@/components/file-chip"
@@ -33,6 +36,8 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const [report, setReport] = useState<ReportTarget | null>(null)
   const [showComments, setShowComments] = useState(!!highlight)
   const [comment, setComment] = useState("")
+  const [showLikes, setShowLikes] = useState(false)
+  const viewer = useImageViewer()
   const supabase = createClient()
   const author = member(post.author_id)
   const liked = post.post_likes.some((l) => l.user_id === me.id)
@@ -137,8 +142,10 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
         <FeedMentionText text={post.content} />
       </p>
       {post.image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.image_url} alt="" className="mt-3 max-h-[520px] w-full object-cover" loading="lazy" />
+        <button type="button" onClick={() => viewer.open(post.image_url!)} className="mt-3 block w-full" aria-label={t("messages.photo")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={post.image_url} alt="" draggable={false} className="max-h-[520px] w-full object-cover [-webkit-touch-callout:none]" loading="lazy" />
+        </button>
       )}
       {post.file_path && <div className="px-4 pt-3"><FileChip path={post.file_path} name={post.file_name ?? "belge.pdf"} size={post.file_size} /></div>}
       {post.polls && (
@@ -149,10 +156,16 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
 
       {post.kind !== "welcome" && (
         <div className="mt-2 flex items-center gap-1 border-t border-border/60 px-2 py-1.5">
-          <button onClick={toggleLike} className={cn("flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary", liked ? "text-red-500" : "text-muted-foreground")}>
-            <motion.span animate={liked ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.25 }}><Heart className={cn("size-[18px]", liked && "fill-current")} /></motion.span>
-            {post.post_likes.length > 0 && post.post_likes.length}
-          </button>
+          <span className="flex items-center">
+            <button onClick={toggleLike} className={cn("flex items-center rounded-xl py-2 pl-3 pr-2 text-sm font-medium transition-colors hover:bg-secondary", liked ? "text-red-500" : "text-muted-foreground")} aria-label={liked ? t("messages.unlike") : t("messages.like")}>
+              <motion.span animate={liked ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.25 }}><Heart className={cn("size-[18px]", liked && "fill-current")} /></motion.span>
+            </button>
+            {post.post_likes.length > 0 && (
+              <button onClick={() => setShowLikes(true)} className={cn("rounded-lg px-1.5 py-2 text-sm font-semibold underline-offset-2 hover:underline", liked ? "text-red-500" : "text-muted-foreground")} aria-label={t("messages.whoLiked")}>
+                {post.post_likes.length}
+              </button>
+            )}
+          </span>
           <button onClick={() => setShowComments((v) => !v)} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary">
             <MessageCircle className="size-[18px]" /> {post.post_comments.length > 0 && post.post_comments.length}
           </button>
@@ -186,6 +199,9 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
         </div>
       )}
       <ReportSheet target={report} onClose={() => setReport(null)} />
+      <Sheet open={showLikes} onClose={() => setShowLikes(false)} title={t("messages.whoLiked")}>
+        <LikersList ids={post.post_likes.map((l) => l.user_id)} />
+      </Sheet>
     </Card>
   )
 }

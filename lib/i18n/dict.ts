@@ -3,6 +3,14 @@
  * Generated from the keys used in the code; keep the three columns aligned.
  */
 export const DICT: Record<string, [string, string, string]> = {
+  "messages.forward": ["İlet","Transférer","Forward"],
+  "messages.forwardN": ["{n} sohbete ilet","Transférer à {n} conversations","Forward to {n} chats"],
+  "messages.forwardTo": ["Şuraya ilet…","Transférer à…","Forward to…"],
+  "messages.forwarded": ["Mesaj iletildi","Message transféré","Message forwarded"],
+  "messages.forwardFailed": ["Mesaj bazı sohbetlere iletilemedi","Le message n'a pas pu être transféré partout","The message couldn't be forwarded everywhere"],
+  "messages.searchConversation": ["Sohbet ara","Rechercher une conversation","Search a conversation"],
+  "common.close": ["Kapat","Fermer","Close"],
+  "common.share": ["Paylaş","Partager","Share"],
   "admin.approve": ["Onayla","Accepter","Approve"],
   "admin.approved": ["{name} onaylandı","{name} est maintenant membre","{name} approved"],
   "admin.confirmReject": ["{name} başvurusu reddedilsin mi?","Refuser la demande de {name} ?","Reject {name}'s request?"],
