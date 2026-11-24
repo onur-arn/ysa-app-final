@@ -676,6 +676,7 @@ create table if not exists messages (
   deleted_at      timestamptz,
   created_at      timestamptz not null default now()
 );
+alter table messages add column if not exists forwarded boolean not null default false;
 create index if not exists messages_conv_idx on messages(conversation_id, created_at desc);
 do $$ begin
   alter table conversations add constraint conversations_pinned_fk foreign key (pinned_message_id) references messages(id) on delete set null;

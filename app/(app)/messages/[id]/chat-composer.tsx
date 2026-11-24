@@ -27,7 +27,7 @@ export type Outgoing =
   | { kind: "poll"; question: string; options: string[]; multiple: boolean }
 
 export function ChatComposer({
-  convId, memberIds, isGroup, replyTo, onCancelReply, onSend,
+  convId, memberIds, isGroup, replyTo, onCancelReply, onSend, onInputFocus,
 }: {
   convId: string
   memberIds: string[]
@@ -35,6 +35,8 @@ export function ChatComposer({
   replyTo: Message | null
   onCancelReply: () => void
   onSend: (o: Outgoing) => Promise<void>
+  /** the text field gets focus (keyboard opening): the thread jumps to the latest message */
+  onInputFocus?: () => void
 }) {
   const { me, station } = useApp()
   const { t } = useI18n()
@@ -184,6 +186,7 @@ export function ChatComposer({
               }
             }}
             rows={1}
+            onFocus={onInputFocus}
             placeholder={isGroup ? t("messages.typeMention") : t("messages.typeMessage")}
             className="max-h-32 min-h-11 flex-1 resize-none rounded-3xl border border-border bg-card px-4 py-2.5 text-[15px] outline-none focus:border-primary"
           />

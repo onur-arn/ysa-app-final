@@ -146,6 +146,8 @@ export type Message = {
   reply_to: string | null
   deleted_at: string | null
   created_at: string
+  /** copy forwarded from another conversation (column added 24/11/2026) */
+  forwarded?: boolean
   message_likes?: { user_id: string }[]
   /** client-only: optimistic message not yet confirmed */
   pending?: boolean

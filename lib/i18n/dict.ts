@@ -6,6 +6,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "messages.forward": ["İlet","Transférer","Forward"],
   "messages.forwardN": ["{n} sohbete ilet","Transférer à {n} conversations","Forward to {n} chats"],
   "messages.forwardTo": ["Şuraya ilet…","Transférer à…","Forward to…"],
+  "messages.forwardedLabel": ["İletildi","Transféré","Forwarded"],
   "messages.forwarded": ["Mesaj iletildi","Message transféré","Message forwarded"],
   "messages.forwardFailed": ["Mesaj bazı sohbetlere iletilemedi","Le message n'a pas pu être transféré partout","The message couldn't be forwarded everywhere"],
   "messages.searchConversation": ["Sohbet ara","Rechercher une conversation","Search a conversation"],

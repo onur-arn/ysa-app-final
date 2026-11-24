@@ -35,14 +35,24 @@ export async function deliverPendingPush() {
   if (!toSend.length) return 0
 
   const userIds = [...new Set(toSend.map((n) => n.user_id))]
-  const titleOf = (n: (typeof toSend)[number]) => (n.count > 1 ? `${n.title} (${n.count})` : n.title)
+  // Pas de compteur « (2) », « (3) » dans le titre : une notification par message suffit.
+  const titleOf = (n: (typeof toSend)[number]) => n.title
+  // The database keeps the first 140 characters of a message: when it was cut, end on a whole
+  // word with "…", like other messaging apps.
+  const BODY_LIMIT = 140
+  const bodyOf = (n: (typeof toSend)[number]) => {
+    const body = n.body ?? ""
+    if (body.length < BODY_LIMIT) return n.body
+    const cut = body.slice(0, BODY_LIMIT - 1).replace(/\s+\S*$/, "").trimEnd()
+    return `${cut || body.slice(0, BODY_LIMIT - 1)}…`
+  }
   const tagOf = (n: (typeof toSend)[number]) => (n.type === "message" ? n.link : n.id)
 
   const { data: devices } = await admin.from("device_tokens").select("token, user_id").in("user_id", userIds)
   const native: ApnsMessage[] = toSend.flatMap((n) =>
     (devices ?? [])
       .filter((d) => d.user_id === n.user_id)
-      .map((d) => ({ token: d.token, title: titleOf(n), body: n.body, url: n.link ?? "/feed", threadId: tagOf(n) })),
+      .map((d) => ({ token: d.token, title: titleOf(n), body: bodyOf(n), url: n.link ?? "/feed", threadId: tagOf(n) })),
   )
   const apns = await sendApns(native)
   if (apns.dead.length) await admin.from("device_tokens").delete().in("token", apns.dead)
@@ -58,7 +68,7 @@ export async function deliverPendingPush() {
           try {
             await webpush.sendNotification(
               { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-              JSON.stringify({ title: titleOf(n), body: n.body, url: n.link ?? "/feed", tag: tagOf(n) }),
+              JSON.stringify({ title: titleOf(n), body: bodyOf(n), url: n.link ?? "/feed", tag: tagOf(n) }),
             )
             sent++
           } catch (e) {

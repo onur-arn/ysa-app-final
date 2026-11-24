@@ -60,7 +60,7 @@ export function ForwardSheet({ message, onClose }: { message: Message | null; on
           if (error) throw error
           attachment = dest
         }
-        const { error } = await sb.from("messages").insert({
+        const row = {
           conversation_id: cid,
           sender_id: me.id,
           kind: message.kind,
@@ -69,7 +69,10 @@ export function ForwardSheet({ message, onClose }: { message: Message | null; on
           attachment_url: attachment,
           attachment_name: message.attachment_name,
           attachment_size: message.attachment_size,
-        })
+        }
+        let { error } = await sb.from("messages").insert({ ...row, forwarded: true })
+        // Base not yet migrated (no "forwarded" column): forward without the label.
+        if (error && /forwarded/.test(error.message)) ({ error } = await sb.from("messages").insert(row))
         if (error) throw error
         void qc.invalidateQueries({ queryKey: qk.messages(cid) })
       } catch {

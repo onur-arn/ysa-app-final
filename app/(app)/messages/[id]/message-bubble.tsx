@@ -161,6 +161,11 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
               <span className="ml-1.5 text-[10px] font-semibold opacity-70">{station(sender?.station_id)?.short}</span>
             </p>
           )}
+          {m.forwarded && !m.deleted_at && (
+            <p className={cn("mb-0.5 flex items-center gap-1 text-[11px] italic", mine ? "text-primary-foreground/75" : "text-muted-foreground", media && "px-3.5 pt-2")}>
+              <Forward className="size-3" /> {t("messages.forwardedLabel")}
+            </p>
+          )}
           {reply && (
             <button onClick={() => onAction("jump", m, reply.id)} className={cn("mb-1.5 block w-full rounded-xl border-l-[3px] px-2 py-1 text-left text-xs", media && "mx-2 mt-2 w-auto", mine ? "border-primary-foreground/70 bg-primary-foreground/12" : "bg-secondary")} style={!mine ? { borderColor: `hsl(${station(member(reply.sender_id)?.station_id)?.color ?? color})` } : undefined}>
               <p className="font-semibold">{member(reply.sender_id)?.full_name}</p>

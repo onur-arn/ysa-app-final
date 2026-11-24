@@ -209,6 +209,15 @@ export function ChatThread({ id }: { id: string }) {
     else if (action === "jump" && target) h.jump(target)
     else if (action === "forward") h.setForward(m)
   }, [])
+  // Tapping the text field: go straight to the latest message and stay there while the
+  // keyboard slides up (the list is resized during the animation).
+  const onInputFocus = useCallback(() => {
+    stick.current = true
+    setAtBottom(true)
+    const toBottom = () => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight }
+    toBottom()
+    for (const ms of [50, 150, 300, 450, 650]) setTimeout(toBottom, ms)
+  }, [])
   const onMediaLoad = useCallback(() => {
     const el = scrollRef.current
     if (el && stick.current) el.scrollTop = el.scrollHeight
@@ -329,7 +338,7 @@ export function ChatThread({ id }: { id: string }) {
           <span>{t("mod.banner")}</span>
         </div>
       ) : (
-        <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} />
+        <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} onInputFocus={onInputFocus} />
       )}
 
       <ForwardSheet message={forward} onClose={() => setForward(null)} />
