@@ -1,5 +1,6 @@
 "use client"
 
+import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Forward, Heart, Pin, Trash2, Users } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -28,13 +29,13 @@ export function MentionText({ text, mentions, inverted }: { text: string; mentio
   const member = useMemberMap()
   const { station, me } = useApp()
   const people = mentions.map((id) => member(id)).filter(Boolean) as Member[]
-  if (!people.length) return <>{text}</>
+  if (!people.length) return <Linkified text={text} />
   const names = people.map((p) => p.full_name).sort((a, b) => b.length - a.length)
   const re = new RegExp(`@(${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g")
   const parts: ReactNode[] = []
   let last = 0
   for (const m of text.matchAll(re)) {
-    parts.push(text.slice(last, m.index))
+    parts.push(<Linkified key={`t${last}`} text={text.slice(last, m.index)} />)
     const who = people.find((p) => p.full_name === m[1])!
     const color = station(who.station_id)?.color ?? "188 57% 48%"
     parts.push(
@@ -49,7 +50,7 @@ export function MentionText({ text, mentions, inverted }: { text: string; mentio
     )
     last = m.index! + m[0].length
   }
-  parts.push(text.slice(last))
+  parts.push(<Linkified key={`t${last}`} text={text.slice(last)} />)
   return <>{parts}</>
 }
 

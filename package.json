@@ -12,6 +12,7 @@
     "dev:https": "next dev --experimental-https"
   },
   "dependencies": {
+    "@capacitor/browser": "^8.0.5",
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",

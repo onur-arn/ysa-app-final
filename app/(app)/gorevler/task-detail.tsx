@@ -1,5 +1,6 @@
 "use client"
 
+import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { CalendarClock, Pencil, Send, Trash2, Users } from "lucide-react"
@@ -82,7 +83,7 @@ export function TaskDetail({ task, onClose, onEdit, onStatus }: { task: Task | n
             <ProfileLink id={task.created_by} className="flex items-center gap-2 text-sm font-medium text-foreground"><MemberAvatar id={task.created_by} size={24} showOnline={false} /> <span className={deletedClass(member(task.created_by))}>{member(task.created_by)?.full_name ?? "—"}</span></ProfileLink>
           </div>
         </div>
-        {task.description && <p className="whitespace-pre-wrap text-sm text-foreground">{task.description}</p>}
+        {task.description && <p className="whitespace-pre-wrap break-words text-sm text-foreground"><Linkified text={task.description} /></p>}
         <div>
           <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("tasks.comments")}</h4>
           <div className="flex flex-col gap-2.5">
@@ -93,7 +94,7 @@ export function TaskDetail({ task, onClose, onEdit, onStatus }: { task: Task | n
                   <ProfileLink id={c.author_id} className="shrink-0"><Avatar name={a?.full_name} photoUrl={a?.photo_url} stationId={a?.station_id} size={28} /></ProfileLink>
                   <div className="min-w-0 flex-1 rounded-2xl bg-secondary/70 px-3 py-2">
                     <p className="text-xs font-semibold text-foreground"><ProfileLink id={c.author_id} className={deletedClass(a)}>{a?.full_name}</ProfileLink> <span className="font-normal text-muted-foreground">· {fmtRelative(c.created_at)}</span></p>
-                    <p className="whitespace-pre-wrap text-sm text-foreground">{c.content}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm text-foreground"><Linkified text={c.content} /></p>
                   </div>
                 </div>
               )

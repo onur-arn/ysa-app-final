@@ -1,5 +1,6 @@
 "use client"
 
+import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { type ReactNode } from "react"
 import { useApp } from "@/components/providers/app-context"
@@ -26,12 +27,12 @@ export function useMentionTargets(): MentionTarget<Tag & { kind: string }>[] {
 /** Post text with every "@mention" highlighted (members and stations in their station colour). */
 export function FeedMentionText({ text }: { text: string }) {
   const targets = useMentionTargets()
-  if (!text.includes("@")) return <>{text}</>
+  if (!text.includes("@")) return <Linkified text={text} />
   const chars = [...text]
   const parts: ReactNode[] = []
   let last = 0
   for (const h of findMentions(text, targets)) {
-    parts.push(chars.slice(last, h.start).join(""))
+    parts.push(<Linkified key={`t${last}`} text={chars.slice(last, h.start).join("")} />)
     const color = h.target.value.color ?? "188 57% 48%"
     const tag = (
       <span className={cn("rounded-md px-1 font-semibold", h.target.value.mine && "ring-1 ring-current")} style={{ color: `hsl(${color})`, backgroundColor: `hsl(${color} / 0.12)` }}>
@@ -42,7 +43,7 @@ export function FeedMentionText({ text }: { text: string }) {
     parts.push(h.target.value.kind === "member" ? <ProfileLink key={h.start} id={h.target.value.id}>{tag}</ProfileLink> : <span key={h.start}>{tag}</span>)
     last = h.end
   }
-  parts.push(chars.slice(last).join(""))
+  parts.push(<Linkified key={`t${last}`} text={chars.slice(last).join("")} />)
   return <>{parts}</>
 }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
@@ -188,7 +189,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
                       <button onClick={() => removeComment(c.id)} className="ml-auto text-muted-foreground opacity-60 hover:text-destructive group-hover:opacity-100" aria-label={t("common.delete")}><Trash2 className="size-3" /></button>
                     )}
                   </p>
-                  <p className="whitespace-pre-wrap break-words text-sm text-foreground">{c.content}</p>
+                  <p className="whitespace-pre-wrap break-words text-sm text-foreground"><Linkified text={c.content} /></p>
                 </div>
               </div>
             )

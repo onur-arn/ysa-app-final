@@ -1,5 +1,8 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+import { openLink } from "@/lib/open-link"
+import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { CalendarPlus, Clock, ExternalLink, Lock, MapPin, Pencil, Trash2 } from "lucide-react"
@@ -19,6 +22,7 @@ import { createClient } from "@/lib/supabase/client"
 import type { AppEvent } from "@/lib/types"
 
 export function EventDetail({ event, onClose, onEdit }: { event: AppEvent | null; onClose: () => void; onEdit: (e: AppEvent) => void }) {
+  const router = useRouter()
   const { me } = useApp()
   const { t, fmtDate } = useI18n()
   const member = useMemberMap()
@@ -69,12 +73,12 @@ export function EventDetail({ event, onClose, onEdit }: { event: AppEvent | null
           </span>
         </p>
         {event.location && (
-          <a href={`https://maps.google.com/?q=${encodeURIComponent(event.location)}`} target="_blank" rel="noreferrer" className="flex items-start gap-2.5 text-foreground hover:text-primary">
+          <a href={`https://maps.google.com/?q=${encodeURIComponent(event.location)}`} onClick={(e) => { e.preventDefault(); void openLink(`https://maps.google.com/?q=${encodeURIComponent(event.location!)}`, (p) => router.push(p)) }} className="flex items-start gap-2.5 text-foreground hover:text-primary">
             <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" /> {event.location}
           </a>
         )}
-        {event.link && <a href={event.link} target="_blank" rel="noreferrer" className="flex items-start gap-2.5 break-all text-primary"><ExternalLink className="mt-0.5 size-4 shrink-0" /> {event.link}</a>}
-        {event.description && <p className="whitespace-pre-wrap rounded-2xl bg-secondary/60 p-3 text-foreground">{event.description}</p>}
+        {event.link && <a href={event.link} onClick={(e) => { e.preventDefault(); void openLink(event.link!, (p) => router.push(p)) }} className="flex items-start gap-2.5 break-all text-primary"><ExternalLink className="mt-0.5 size-4 shrink-0" /> {event.link}</a>}
+        {event.description && <p className="whitespace-pre-wrap break-words rounded-2xl bg-secondary/60 p-3 text-foreground"><Linkified text={event.description} /></p>}
         {event.created_by && (
           <ProfileLink id={event.created_by} className="flex items-center gap-2 text-xs text-muted-foreground"><MemberAvatar id={event.created_by} size={22} showOnline={false} /> {t("agenda.createdBy", { name: member(event.created_by)?.full_name ?? "" })}</ProfileLink>
         )}
