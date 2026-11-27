@@ -157,7 +157,7 @@ export function ChatComposer({
   }
 
   return (
-    <div className="relative border-t border-border/50 bg-background/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
+    <div className="relative z-20 border-t border-border/50 bg-background/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
       <AnimatePresence>
         {candidates.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="absolute inset-x-3 bottom-full mb-2 overflow-hidden rounded-2xl border border-border bg-popover p-1 shadow-2xl">
