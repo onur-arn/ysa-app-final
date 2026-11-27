@@ -842,6 +842,14 @@ create policy "mlikes read"   on message_likes for select to authenticated
 create policy "mlikes insert" on message_likes for insert to authenticated
   with check (user_id = auth.uid() and exists(select 1 from messages m where m.id = message_id and public.is_member_of(m.conversation_id)));
 create policy "mlikes delete" on message_likes for delete to authenticated using (user_id = auth.uid());
+-- Reactions: 5 emojis to choose from, one per member and message (27/11/2026).
+alter table message_likes add column if not exists emoji text not null default '❤️';
+do $$ begin
+  alter table message_likes add constraint message_likes_emoji_check check (emoji in ('❤️', '👍', '😂', '😮', '🙏'));
+exception when duplicate_object then null; end $$;
+drop policy if exists "mlikes update" on message_likes;
+create policy "mlikes update" on message_likes for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 create or replace function public.pin_message(cid uuid, mid uuid) returns void
 language plpgsql security definer set search_path = public as $$

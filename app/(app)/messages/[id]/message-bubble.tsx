@@ -61,6 +61,10 @@ function ChatPoll({ message, inverted }: { message: Message; inverted: boolean }
   return <PollView poll={poll} inverted={inverted} onChanged={(next: Poll) => qc.setQueryData(qk.polls(message.id), next)} />
 }
 
+/** The 5 reactions offered on a message (one per member, like WhatsApp). Same list as the SQL check. */
+export const REACTIONS = ["❤️", "👍", "😂", "😮", "🙏"] as const
+const emojiOf = (l: { emoji?: string }) => l.emoji ?? "❤️"
+
 export type BubbleAction = "reply" | "pin" | "delete" | "jump" | "forward" | "edit" | "star"
 
 type BubbleProps = {
@@ -89,7 +93,7 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
   const viewer = useImageViewer()
   const [menu, setMenu] = useState(false)
   const [report, setReport] = useState<ReportTarget | null>(null)
-  const [burst, setBurst] = useState(0)
+  const [burst, setBurst] = useState<{ n: number; emoji: string } | null>(null)
   const [loaded, setLoaded] = useState(false)
   const press = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pressed = useRef(false)
@@ -100,18 +104,28 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
   const touch = useRef({ x: 0, y: 0, dx: 0, swiping: false })
   const [showLikes, setShowLikes] = useState(false)
   const likes = m.message_likes ?? []
-  const likedByMe = likes.some((l) => l.user_id === me.id)
+  const myReaction = likes.find((l) => l.user_id === me.id)
+  // most used first, at most 3 shown on the badge
+  const counts = REACTIONS.map((e) => ({ e, n: likes.filter((l) => emojiOf(l) === e).length })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n)
   const mine = m.sender_id === me.id
 
-  async function toggleLike() {
+  /** Same emoji as mine → removes it; another one → replaces it (one reaction per person). */
+  async function react(emoji: string = "❤️") {
     if (m.deleted_at || m.pending || m.kind === "system") return
-    if (!likedByMe) setBurst((b) => b + 1)
-    const updated = likedByMe ? likes.filter((l) => l.user_id !== me.id) : [...likes, { user_id: me.id }]
+    const removing = myReaction && emojiOf(myReaction) === emoji
+    if (!removing) setBurst((b) => ({ n: (b?.n ?? 0) + 1, emoji }))
+    const others = likes.filter((l) => l.user_id !== me.id)
+    const updated = removing ? others : [...others, { user_id: me.id, emoji }]
     qc.setQueryData<Message[]>(qk.messages(m.conversation_id), (old) => old?.map((x) => (x.id === m.id ? { ...x, message_likes: updated } : x)))
     const sb = createClient()
-    if (likedByMe) await sb.from("message_likes").delete().eq("message_id", m.id).eq("user_id", me.id)
-    else await sb.from("message_likes").insert({ message_id: m.id, user_id: me.id })
+    const { error } = removing
+      ? await sb.from("message_likes").delete().eq("message_id", m.id).eq("user_id", me.id)
+      : await sb.from("message_likes").upsert({ message_id: m.id, user_id: me.id, emoji }, { onConflict: "message_id,user_id" })
+    if (error) void qc.invalidateQueries({ queryKey: qk.messages(m.conversation_id) })
   }
+  // double-tap: ❤️ (or removes my reaction, whatever it is)
+  const toggleLike = () => (myReaction && emojiOf(myReaction) !== "❤️" ? react(emojiOf(myReaction)) : react("❤️"))
+
   const sender = member(m.sender_id)
   const color = station(sender?.station_id)?.color ?? "188 57% 48%"
   const firstOfGroup = !prev || prev.sender_id !== m.sender_id || prev.kind === "system" || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > 5 * 60_000
@@ -249,16 +263,16 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
 
           {/* double-tap heart */}
           <AnimatePresence>
-            {burst > 0 && (
+            {burst && (
               <motion.span
-                key={burst}
+                key={burst.n}
                 className="pointer-events-none absolute inset-0 flex items-center justify-center"
                 initial={{ opacity: 0, scale: 0.4 }}
                 animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.15, 1, 1.1] }}
                 transition={{ duration: 0.7, times: [0, 0.25, 0.7, 1] }}
-                onAnimationComplete={() => setBurst(0)}
+                onAnimationComplete={() => setBurst(null)}
               >
-                <Heart className="size-9 fill-red-500 text-red-500 drop-shadow" />
+                <span className="text-4xl drop-shadow">{burst.emoji}</span>
               </motion.span>
             )}
           </AnimatePresence>
@@ -268,9 +282,9 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
           <button
             onClick={(e) => { e.stopPropagation(); setShowLikes(true) }}
             className={cn("absolute -bottom-3 z-10 flex items-center gap-0.5 rounded-full border border-border bg-card px-1.5 py-[3px] text-[10px] font-semibold shadow-sm active:scale-95", mine ? "left-2" : "right-2")}
-            aria-label={t("messages.whoLiked")}
+            aria-label={t("messages.reactions")}
           >
-            <Heart className={cn("size-3", likedByMe ? "fill-red-500 text-red-500" : "fill-red-500/70 text-red-500/70")} />
+            <span className="flex text-[12px] leading-none">{counts.slice(0, 3).map((c) => <span key={c.e}>{c.e}</span>)}</span>
             {likes.length > 1 && <span className="text-foreground">{likes.length}</span>}
           </button>
         )}
@@ -279,16 +293,29 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
 
       {/* actions (long press) */}
       <Sheet open={menu} onClose={() => setMenu(false)}>
+        {!m.deleted_at && !m.pending && (
+          <div className="mb-3 flex justify-between rounded-full bg-secondary/60 px-2 py-1.5">
+            {REACTIONS.map((e) => (
+              <button
+                key={e}
+                onClick={act(() => void react(e))}
+                className={cn("flex size-12 items-center justify-center rounded-full text-[28px] transition-transform active:scale-90", myReaction && emojiOf(myReaction) === e && "bg-primary/15 ring-2 ring-primary/40")}
+                aria-label={e}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mb-3 grid grid-cols-3 gap-2">
           <QuickAction icon={CornerUpLeft} label={t("messages.reply")} onClick={act(() => onAction("reply", m))} disabled={!!m.deleted_at} />
           <QuickAction icon={Forward} label={t("messages.forward")} onClick={act(() => onAction("forward", m))} disabled={!canForward} />
           <QuickAction icon={Copy} label={t("messages.copy")} onClick={act(() => void navigator.clipboard?.writeText(m.content ?? ""))} disabled={!m.content || !!m.deleted_at} />
         </div>
         <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-secondary/60">
-          {!m.deleted_at && <MenuItem icon={Heart} onClick={act(() => void toggleLike())}>{likedByMe ? t("messages.unlike") : t("messages.like")}</MenuItem>}
           {!m.deleted_at && !m.pending && <MenuItem icon={starred ? StarOff : Star} onClick={act(() => onAction("star", m))}>{starred ? t("messages.unstar") : t("messages.star")}</MenuItem>}
           {mine && m.kind === "text" && !m.deleted_at && !m.pending && <MenuItem icon={Pencil} onClick={act(() => onAction("edit", m))}>{t("common.edit")}</MenuItem>}
-          {likes.length > 0 && <MenuItem icon={Users} onClick={act(() => setShowLikes(true))}>{t("messages.whoLiked")} · {likes.length}</MenuItem>}
+          {likes.length > 0 && <MenuItem icon={Users} onClick={act(() => setShowLikes(true))}>{t("messages.reactions")} · {likes.length}</MenuItem>}
           {canPin && !m.deleted_at && <MenuItem icon={Pin} onClick={act(() => onAction("pin", m))}>{t("messages.pin")}</MenuItem>}
           {!mine && !m.deleted_at && <MenuItem icon={Flag} onClick={act(() => setReport({ kind: "message", targetId: m.id, conversationId: m.conversation_id, label: member(m.sender_id)?.full_name ?? "" }))}>{t("report.action")}</MenuItem>}
           {(mine || isAdmin(me)) && !m.deleted_at && <MenuItem icon={Trash2} danger onClick={act(() => onAction("delete", m))}>{t("common.delete")}</MenuItem>}
@@ -296,15 +323,15 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
       </Sheet>
 
       <ReportSheet target={report} onClose={() => setReport(null)} />
-      <Sheet open={showLikes} onClose={() => setShowLikes(false)} title={t("messages.whoLiked")}>
-        <LikersList ids={likes.map((l) => l.user_id)} />
+      <Sheet open={showLikes} onClose={() => setShowLikes(false)} title={t("messages.reactions")}>
+        <LikersList ids={likes.map((l) => l.user_id)} emojis={Object.fromEntries(likes.map((l) => [l.user_id, emojiOf(l)]))} />
       </Sheet>
     </motion.div>
   )
 })
 
 /** People who liked a message or a post. */
-export function LikersList({ ids }: { ids: string[] }) {
+export function LikersList({ ids, emojis }: { ids: string[]; emojis?: Record<string, string> }) {
   const member = useMemberMap()
   const { station } = useApp()
   const { t } = useI18n()
@@ -319,7 +346,7 @@ export function LikersList({ ids }: { ids: string[] }) {
               <span className={cn("block truncate text-[15px] font-medium text-foreground", deletedClass(p))}>{p?.full_name ?? t("common.formerMember")}</span>
               {p && <span className="block truncate text-xs text-muted-foreground">{station(p.station_id)?.name ?? ""}</span>}
             </span>
-            <Heart className="size-4 shrink-0 fill-red-500 text-red-500" />
+            {emojis?.[id] ? <span className="shrink-0 text-xl">{emojis[id]}</span> : <Heart className="size-4 shrink-0 fill-red-500 text-red-500" />}
           </ProfileLink>
         )
       })}

@@ -124,14 +124,14 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
         // A like only changes one message: patch it in place (a refetch would drop the older pages
         // already loaded and make the conversation jump).
         .on("postgres_changes", { event: "*", schema: "public", table: "message_likes" }, (p) => {
-          const row = (p.eventType === "DELETE" ? p.old : p.new) as { message_id?: string; user_id?: string }
+          const row = (p.eventType === "DELETE" ? p.old : p.new) as { message_id?: string; user_id?: string; emoji?: string }
           if (!row.message_id || !row.user_id) return void qc.invalidateQueries({ queryKey: ["messages"] })
           qc.setQueriesData<Message[]>({ queryKey: ["messages"] }, (old) => {
             if (!Array.isArray(old) || !old.some((m) => m.id === row.message_id)) return old
             return old.map((m) => {
               if (m.id !== row.message_id) return m
               const likes = (m.message_likes ?? []).filter((l) => l.user_id !== row.user_id)
-              return { ...m, message_likes: p.eventType === "DELETE" ? likes : [...likes, { user_id: row.user_id! }] }
+              return { ...m, message_likes: p.eventType === "DELETE" ? likes : [...likes, { user_id: row.user_id!, emoji: row.emoji ?? "❤️" }] }
             })
           })
         })

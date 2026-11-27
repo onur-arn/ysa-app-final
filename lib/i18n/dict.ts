@@ -416,4 +416,5 @@ export const DICT: Record<string, [string, string, string]> = {
   "notes.shareHint": ["Seçilen istasyonların üyeleri notu görebilir ve düzenleyebilir.","Seçilen istasyonların üyeleri notu görebilir ve düzenleyebilir.","Seçilen istasyonların üyeleri notu görebilir ve düzenleyebilir."],
   "notes.sharedBy": ["Bu notu paylaşan istasyon:","Bu notu paylaşan istasyon:","Bu notu paylaşan istasyon:"],
   "notes.lastEdit": ["Son düzenleme: {name} · {when}","Son düzenleme: {name} · {when}","Son düzenleme: {name} · {when}"],
+  "messages.reactions": ["Tepkiler","Tepkiler","Tepkiler"],
 }

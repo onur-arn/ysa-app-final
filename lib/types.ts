@@ -152,7 +152,8 @@ export type Message = {
   forwarded?: boolean
   /** set when the sender changed the text ("düzenlendi") */
   edited_at?: string | null
-  message_likes?: { user_id: string }[]
+  /** reactions: one per member (emoji added 27/11/2026, ❤️ before) */
+  message_likes?: { user_id: string; emoji?: string }[]
   /** client-only: optimistic message not yet confirmed */
   pending?: boolean
 }
