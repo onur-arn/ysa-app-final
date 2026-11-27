@@ -20,7 +20,7 @@ export async function deliverPendingPush() {
     .is("pushed_at", null)
     .is("read_at", null)
     .gte("created_at", since)
-    .limit(200)
+    .limit(1000)   // a new feed post notifies every member at once
   if (!pending?.length) return 0
 
   // Claim the rows first so concurrent flushes never push twice.

@@ -32,6 +32,13 @@ export async function uploadFile(file: File, scope: string) {
   return path
 }
 
+/** Short-lived signed link to read a private file (PDF viewer). */
+export async function signedFileUrl(path: string) {
+  const { data, error } = await createClient().storage.from("files").createSignedUrl(path, 300)
+  if (error || !data) throw error ?? new Error("signed url")
+  return data.signedUrl
+}
+
 /** Short-lived signed link that downloads the file with its original name. */
 export async function downloadFile(path: string, fileName: string, mode: "download" | "open" = "download") {
   const { data, error } = await createClient().storage.from("files").createSignedUrl(path, 300, mode === "download" ? { download: fileName } : undefined)

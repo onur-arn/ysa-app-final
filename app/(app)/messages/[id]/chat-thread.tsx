@@ -2,8 +2,9 @@
 
 import { ProfileLink } from "@/components/profile/profile-link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowDown, ArrowLeft, Pin, Users, X } from "lucide-react"
+import { ArrowDown, ArrowLeft, Pin, Search, Users, X } from "lucide-react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Avatar, MemberAvatar } from "@/components/avatar"
 import { PhoneButton } from "@/components/phone-actions"
@@ -11,8 +12,8 @@ import { ProfileSheet } from "@/components/profile/profile-sheet"
 import { EmptyState } from "@/components/ui/misc"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
-import { fetchMessage, fetchMessages, PAGE } from "@/lib/data/fetchers"
-import { useConversation, useMemberMap, useMessages } from "@/lib/data/hooks"
+import { fetchMessage, fetchMessages, fetchMessagesFrom, PAGE } from "@/lib/data/fetchers"
+import { useConversation, useMemberMap, useMessages, useStarredIds } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { isAdmin, isIntl } from "@/lib/permissions"
@@ -20,7 +21,7 @@ import { deletedClass } from "@/lib/members"
 import { dispatchPush } from "@/lib/push"
 import { useHub, useOnline } from "@/lib/realtime/hub"
 import { createClient } from "@/lib/supabase/client"
-import type { ConversationRow, Message, Notification } from "@/lib/types"
+import type { ConversationRow, Message, Notification, StarredMessage } from "@/lib/types"
 import { compressImage, uploadFile, uploadMedia } from "@/lib/upload"
 import { cn, isSameDay } from "@/lib/utils"
 import { ChatComposer, type Outgoing } from "./chat-composer"
@@ -28,6 +29,7 @@ import { useKeyboardViewport } from "@/lib/use-keyboard-viewport"
 import { ConversationInfo } from "./conversation-info"
 import { MessageBubble, type BubbleAction } from "./message-bubble"
 import { ForwardSheet } from "@/components/forward-sheet"
+import { MessageSearch } from "./message-search"
 
 export function ChatThread({ id }: { id: string }) {
   const { me, station } = useApp()
@@ -44,6 +46,11 @@ export function ChatThread({ id }: { id: string }) {
   const [hasMore, setHasMore] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
   const [forward, setForward] = useState<Message | null>(null)
+  const [editing, setEditing] = useState<Message | null>(null)
+  const [searching, setSearching] = useState(false)
+  const starred = useStarredIds()
+  const router = useRouter()
+  const params = useSearchParams()
   const viewportHeight = useKeyboardViewport()
   const scrollRef = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
@@ -139,6 +146,54 @@ export function ChatThread({ id }: { id: string }) {
     setTimeout(() => setHighlight(null), 1600)
   }
 
+  /** Scrolls to any message of the conversation, loading the older ones it needs first. */
+  async function jumpTo(target: Pick<Message, "id" | "created_at">) {
+    if (!qc.getQueryData<Message[]>(qk.messages(id))?.some((m) => m.id === target.id)) {
+      stick.current = false
+      const from = await fetchMessagesFrom(id, target.created_at)
+      qc.setQueryData<Message[]>(qk.messages(id), (old = []) => {
+        const seen = new Set(old.map((m) => m.id))
+        return [...old, ...from.filter((m) => !seen.has(m.id))].sort((a, b) => a.created_at.localeCompare(b.created_at))
+      })
+      setHasMore(true)
+      await new Promise((r) => setTimeout(r, 80))
+    }
+    stick.current = false
+    setAtBottom(false)
+    jump(target.id)
+  }
+
+  // ?m=<message id> (from ⭐ Yıldızlı mesajlar): open the conversation on that message
+  const wanted = params.get("m")
+  useEffect(() => {
+    if (!wanted || !messages.length) return
+    router.replace(`/messages/${id}`, { scroll: false })
+    void fetchMessage(wanted).then((m) => { if (m && m.conversation_id === id) void jumpTo(m) })
+  }, [wanted, messages.length > 0]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── ⭐ important messages (each member's own list)
+  async function toggleStar(m: Message) {
+    const on = starred.has(m.id)
+    qc.setQueryData<StarredMessage[]>(qk.stars, (old = []) =>
+      on ? old.filter((x) => x.message_id !== m.id) : [{ message_id: m.id, created_at: new Date().toISOString(), messages: m }, ...old])
+    const q = on
+      ? supabase.from("message_stars").delete().eq("user_id", me.id).eq("message_id", m.id)
+      : supabase.from("message_stars").insert({ user_id: me.id, message_id: m.id })
+    const { error } = await q
+    if (error) { toast(t("common.error"), { error: true }); void qc.invalidateQueries({ queryKey: qk.stars }) }
+    else toast(on ? t("messages.unstarred") : t("messages.starred"))
+  }
+
+  // ── editing one of my text messages ("düzenlendi")
+  async function saveEdit(m: Message, content: string, mentions: string[]) {
+    setEditing(null)
+    if (content === m.content) return
+    const put = (patch: Partial<Message>) => qc.setQueryData<Message[]>(qk.messages(id), (old) => old?.map((x) => (x.id === m.id ? { ...x, ...patch } : x)))
+    put({ content, mentions, edited_at: new Date().toISOString() })
+    const { error } = await supabase.from("messages").update({ content, mentions }).eq("id", m.id)
+    if (error) { put({ content: m.content, mentions: m.mentions, edited_at: m.edited_at }); toast(t("common.error"), { error: true }) }
+  }
+
   // ── pinned message (📌 Uluslararası Büro only)
   const pinnedId = conv?.pinned_message_id ?? null
   const { data: pinned } = useQuery({
@@ -202,16 +257,22 @@ export function ChatThread({ id }: { id: string }) {
   }
 
   // One stable callback for every bubble (lets React skip re-rendering unchanged bubbles).
-  const handlers = useRef({ setReplyTo, pin, remove, jump, setForward })
-  handlers.current = { setReplyTo, pin, remove, jump, setForward }
+  const handlers = useRef({ setReplyTo, pin, remove, jump: jumpTo, setForward, setEditing, toggleStar })
+  handlers.current = { setReplyTo, pin, remove, jump: jumpTo, setForward, setEditing, toggleStar }
   const onAction = useCallback((action: BubbleAction, m: Message, target?: string) => {
     const h = handlers.current
     if (action === "reply") h.setReplyTo(m)
     else if (action === "pin") void h.pin(m.id)
     else if (action === "delete") void h.remove(m)
-    else if (action === "jump" && target) h.jump(target)
+    else if (action === "jump" && target) {
+      const msg = qc.getQueryData<Message[]>(qk.messages(m.conversation_id))?.find((x) => x.id === target)
+      if (msg) void h.jump(msg)
+      else void fetchMessage(target).then((x) => x && h.jump(x))
+    }
     else if (action === "forward") h.setForward(m)
-  }, [])
+    else if (action === "edit") { h.setReplyTo(null); h.setEditing(m) }
+    else if (action === "star") void h.toggleStar(m)
+  }, [qc])
   // Tapping the text field: go straight to the latest message and stay there while the
   // keyboard slides up (the list is resized during the animation).
   const onInputFocus = useCallback(() => {
@@ -244,7 +305,7 @@ export function ChatThread({ id }: { id: string }) {
       {/* header */}
       <div className="relative z-10 flex items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl">
         <Link href="/messages" className="flex size-10 items-center justify-center rounded-full hover:bg-secondary" aria-label="back"><ArrowLeft className="size-5" /></Link>
-        <button onClick={() => (isGroup ? setInfo(true) : otherId && setProfile(otherId))} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <button onClick={() => conv && setInfo(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           {!conv ? (
             <span className="size-10 animate-pulse rounded-full bg-secondary" />
           ) : isGroup ? (
@@ -257,13 +318,14 @@ export function ChatThread({ id }: { id: string }) {
             <span className={cn("block truncate text-xs", typers.length || (!isGroup && otherOnline) ? "font-medium text-primary" : "text-muted-foreground")}>{subtitle}</span>
           </span>
         </button>
+        {conv && <button onClick={() => setSearching(true)} className="flex size-10 items-center justify-center rounded-full text-foreground hover:bg-secondary" aria-label={t("messages.searchIn")}><Search className="size-5" /></button>}
         {!isGroup && other && <PhoneButton phone={other.phone} />}
       </div>
 
       {/* pinned */}
       {pinnedId && (
         <div className="flex items-center gap-2 border-b border-border/60 bg-card/80 px-3 py-2 backdrop-blur">
-          <button onClick={() => jump(pinnedId)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+          <button onClick={() => pinned && void jumpTo(pinned)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary"><Pin className="size-4" /></span>
             <span className="min-w-0">
               <span className="block text-[11px] font-bold text-primary">{t("messages.pinnedBy", { name: member(conv?.pinned_by)?.first_name ?? "" })}</span>
@@ -302,6 +364,7 @@ export function ChatThread({ id }: { id: string }) {
                   canPin={isIntl(me)}
                   readByOther={!isGroup && !!otherRead && otherRead >= m.created_at}
                   highlight={highlight === m.id}
+                  starred={starred.has(m.id)}
                   isNew={new Date(m.created_at).getTime() > bootedAt.current}
                   onAction={onAction}
                   onMediaLoad={onMediaLoad}
@@ -341,11 +404,13 @@ export function ChatThread({ id }: { id: string }) {
           <span>{t("mod.banner")}</span>
         </div>
       ) : (
-        <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} onInputFocus={onInputFocus} />
+        <ChatComposer convId={id} memberIds={memberIds} isGroup={!!isGroup} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} onSend={send} onInputFocus={onInputFocus}
+          editing={editing} onCancelEdit={() => setEditing(null)} onEdit={saveEdit} />
       )}
 
       <ForwardSheet message={forward} onClose={() => setForward(null)} />
-      {conv && <ConversationInfo open={info} onClose={() => setInfo(false)} conv={conv} onOpenProfile={(uid) => { setInfo(false); setProfile(uid) }} />}
+      {conv && <ConversationInfo open={info} onClose={() => setInfo(false)} conv={conv} onOpenProfile={(uid) => { setInfo(false); setProfile(uid) }} onJump={(m) => { setInfo(false); void jumpTo(m) }} />}
+      <MessageSearch open={searching} convId={id} onClose={() => setSearching(false)} onPick={(m) => { setSearching(false); void jumpTo(m) }} />
       <ProfileSheet memberId={profile} onClose={() => setProfile(null)} />
     </div>
   )

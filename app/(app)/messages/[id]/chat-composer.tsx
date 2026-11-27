@@ -1,8 +1,8 @@
 "use client"
 
-import { BarChart3, CornerUpLeft, FileText, ImageIcon, Loader2, Mic, Plus, Send, Smile, X } from "lucide-react"
+import { BarChart3, Check, CornerUpLeft, FileText, ImageIcon, Loader2, Mic, Pencil, Plus, Send, Smile, X } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { VoiceRecorderBar, useVoiceRecorder } from "@/components/audio-message"
 import { MemberAvatar } from "@/components/avatar"
 import { GifPicker } from "@/components/gif-picker"
@@ -27,7 +27,7 @@ export type Outgoing =
   | { kind: "poll"; question: string; options: string[]; multiple: boolean }
 
 export function ChatComposer({
-  convId, memberIds, isGroup, replyTo, onCancelReply, onSend, onInputFocus,
+  convId, memberIds, isGroup, replyTo, onCancelReply, onSend, onInputFocus, editing, onCancelEdit, onEdit,
 }: {
   convId: string
   memberIds: string[]
@@ -37,6 +37,10 @@ export function ChatComposer({
   onSend: (o: Outgoing) => Promise<void>
   /** the text field gets focus (keyboard opening): the thread jumps to the latest message */
   onInputFocus?: () => void
+  /** one of my text messages being edited: the field holds its text, sending saves it */
+  editing?: Message | null
+  onCancelEdit?: () => void
+  onEdit?: (m: Message, content: string, mentions: string[]) => void
 }) {
   const { me, station } = useApp()
   const { t } = useI18n()
@@ -56,6 +60,25 @@ export function ChatComposer({
   const photoRef = useRef<HTMLInputElement>(null)
   const docRef = useRef<HTMLInputElement>(null)
   const voice = useVoiceRecorder()
+  const draft = useRef("")
+
+  // Entering edit mode puts the message text in the field; leaving it gives the draft back.
+  useEffect(() => {
+    if (editing) {
+      draft.current = text
+      setText(editing.content ?? "")
+      setMentions(editing.mentions.map((uid) => member(uid)).filter((x): x is Member => !!x))
+      requestAnimationFrame(() => {
+        const el = ref.current
+        if (!el) return
+        el.focus()
+        el.setSelectionRange(el.value.length, el.value.length)
+      })
+    } else if (draft.current !== null) {
+      setText(draft.current)
+      draft.current = ""
+    }
+  }, [editing?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // "@" autocomplete over the conversation's members (groups only)
   const candidates = useMemo(() => {
@@ -98,6 +121,13 @@ export function ChatComposer({
     const content = text.trim()
     if (!content) return
     const ids = mentions.filter((m) => content.includes(`@${m.full_name}`)).map((m) => m.id)
+    if (editing) {
+      draft.current = ""
+      setText("")
+      setMentions([])
+      onEdit?.(editing, content, ids)
+      return
+    }
     setText("")
     setMentions([])
     setQuery(null)
@@ -142,7 +172,14 @@ export function ChatComposer({
         )}
       </AnimatePresence>
 
-      {replyTo && (
+      {editing && (
+        <div className="mb-2 flex items-center gap-2 rounded-xl border-l-[3px] border-primary bg-secondary px-3 py-1.5 text-xs">
+          <Pencil className="size-3.5 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 truncate"><b>{t("messages.editing")}</b> · {editing.content}</span>
+          <button onClick={onCancelEdit} aria-label="cancel"><X className="size-3.5" /></button>
+        </div>
+      )}
+      {replyTo && !editing && (
         <div className="mb-2 flex items-center gap-2 rounded-xl border-l-[3px] border-primary bg-secondary px-3 py-1.5 text-xs">
           <CornerUpLeft className="size-3.5 shrink-0 text-primary" />
           <span className="min-w-0 flex-1 truncate"><b>{member(replyTo.sender_id)?.full_name}</b> · {replyTo.content ?? replyTo.attachment_name ?? t(`messages.kind.${replyTo.kind}`)}</span>
@@ -192,7 +229,7 @@ export function ChatComposer({
           />
           {text.trim() ? (
             <button onClick={submit} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label={t("common.send")}>
-              <Send className="size-5" />
+              {editing ? <Check className="size-5" /> : <Send className="size-5" />}
             </button>
           ) : (
             <button onClick={voice.start} disabled={busy} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-label={t("messages.voice")}>

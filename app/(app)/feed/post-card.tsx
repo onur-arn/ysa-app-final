@@ -4,7 +4,7 @@ import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
-import { Flag, GraduationCap, Heart, MessageCircle, MoreHorizontal, Pin, PinOff, Send, Trash2 } from "lucide-react"
+import { Flag, GraduationCap, Heart, MessageCircle, MoreHorizontal, Pencil, Pin, PinOff, Send, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useImageViewer } from "@/components/image-viewer"
 import { Sheet } from "@/components/ui/sheet"
@@ -39,6 +39,9 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
   const [showComments, setShowComments] = useState(!!highlight)
   const [comment, setComment] = useState("")
   const [showLikes, setShowLikes] = useState(false)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const canEdit = post.author_id === me.id && post.kind !== "welcome"
   const viewer = useImageViewer()
   const supabase = createClient()
   const author = member(post.author_id)
@@ -83,6 +86,19 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
     toast(post.pinned ? t("feed.unpinned") : t("feed.pinnedToast"))
   }
 
+  async function saveEdit() {
+    const content = editing?.trim() ?? ""
+    if (!content && !post.image_url && !post.file_path && !post.polls) return toast(t("feed.emptyEdit"), { error: true })
+    if (content === post.content) return setEditing(null)
+    setSavingEdit(true)
+    const { error } = await supabase.from("posts").update({ content }).eq("id", post.id)
+    setSavingEdit(false)
+    if (error) return toast(t("common.error"), { error: true })
+    patch((p) => ({ ...p, content, edited_at: new Date().toISOString() }))
+    setEditing(null)
+    void qc.invalidateQueries({ queryKey: qk.feed })   // mentions are recomputed by the database
+  }
+
   async function remove() {
     setMenu(false)
     if (!confirm(t("feed.confirmDelete"))) return
@@ -110,6 +126,7 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
           <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
             <StationBadge id={post.station_id ?? author?.station_id} short className="px-2 py-0 text-[10px]" />
             <span>{fmtRelative(post.created_at)}</span>
+            {post.edited_at && <span className="italic">· {t("messages.edited")}</span>}
           </div>
         </div>
         {(isIntl(me) || canDelete || canReport) && (
@@ -125,6 +142,9 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
                         {post.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />} {post.pinned ? t("feed.unpin") : t("feed.pin")}
                       </button>
                     )}
+                    {canEdit && (
+                      <button onClick={() => { setMenu(false); setEditing(post.content) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm hover:bg-secondary"><Pencil className="size-4" /> {t("common.edit")}</button>
+                    )}
                     {canReport && (
                       <button onClick={() => { setMenu(false); setReport({ kind: "post", targetId: post.id, label: author?.full_name ?? "" }) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm hover:bg-secondary"><Flag className="size-4" /> {t("report.action")}</button>
                     )}
@@ -139,10 +159,26 @@ export function PostCard({ post, highlight, onOpenProfile }: { post: Post; highl
         )}
       </div>
 
-      <p className="whitespace-pre-wrap break-words px-4 pt-3 text-[15px] leading-relaxed text-foreground">
-        {post.kind === "igem" && <span className="mb-1 block text-xs font-semibold text-violet-600">{t("feed.igemIntro")}</span>}
-        <FeedMentionText text={post.content} />
-      </p>
+      {editing !== null ? (
+        <div className="flex flex-col gap-2 px-4 pt-3">
+          <textarea
+            autoFocus
+            value={editing}
+            onChange={(e) => setEditing(e.target.value)}
+            rows={Math.min(10, Math.max(3, editing.split("\n").length + 1))}
+            className="w-full resize-none rounded-2xl border border-border bg-background px-3 py-2 text-[15px] leading-relaxed outline-none focus:border-primary"
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setEditing(null)} className="rounded-full px-4 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-secondary">{t("common.cancel")}</button>
+            <button onClick={saveEdit} disabled={savingEdit} className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">{t("common.save")}</button>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-wrap break-words px-4 pt-3 text-[15px] leading-relaxed text-foreground">
+          {post.kind === "igem" && <span className="mb-1 block text-xs font-semibold text-violet-600">{t("feed.igemIntro")}</span>}
+          <FeedMentionText text={post.content} />
+        </p>
+      )}
       {post.image_url && (
         <button type="button" onClick={() => viewer.open(post.image_url!)} className="mt-3 block w-full" aria-label={t("messages.photo")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}

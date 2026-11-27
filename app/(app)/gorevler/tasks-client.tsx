@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { ListChecks, Plus } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { Chips, EmptyState, Fab } from "@/components/ui/misc"
+import { Chips, EmptyState, Fab, Segmented } from "@/components/ui/misc"
 import { useApp } from "@/components/providers/app-context"
 import { TASK_STATUSES } from "@/lib/constants"
 import { useTasks } from "@/lib/data/hooks"
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { TaskCard } from "./task-card"
 import { TaskDetail } from "./task-detail"
 import { TaskForm } from "./task-form"
+import { NotesClient } from "./notes-client"
 
 const COUNTER_COLORS: Record<TaskStatus, string> = { todo: "oklch(0.6 0.02 250)", in_progress: "oklch(0.68 0.078 205)", done: "oklch(0.7 0.13 150)" }
 const NEXT: Record<TaskStatus, TaskStatus> = { todo: "in_progress", in_progress: "done", done: "todo" }
@@ -35,7 +36,9 @@ export function TasksClient() {
   const [openId, setOpenId] = useState<string | null>(params.get("open"))
   const [form, setForm] = useState<{ open: boolean; task?: Task }>({ open: false })
 
+  const [tab, setTab] = useState<"tasks" | "notes">(params.get("tab") === "notes" ? "notes" : "tasks")
   useEffect(() => setOpenId(params.get("open")), [params])
+  useEffect(() => { if (params.get("tab") === "notes") setTab("notes") }, [params])
 
   const scoped = useMemo(
     // RLS already limits members to their own station; Uluslararası can narrow by station.
@@ -57,8 +60,21 @@ export function TasksClient() {
     if (params.get("open")) router.replace("/gorevler")
   }
 
+  const tabs = (
+    <Segmented layoutId="tasks-tab" value={tab} onChange={setTab} options={[{ id: "tasks", label: t("nav.tasks") }, { id: "notes", label: t("notes.title") }]} />
+  )
+  if (tab === "notes") {
+    return (
+      <div className="flex flex-col gap-4 px-4 pt-4">
+        {tabs}
+        <NotesClient />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4 px-4 pt-4">
+      {tabs}
       {intl && (
         <Chips value={scope} onChange={setScope} options={[{ id: "all", label: t("common.all") }, ...stations.map((s) => ({ id: s.id, label: s.city, color: s.color }))]} />
       )}

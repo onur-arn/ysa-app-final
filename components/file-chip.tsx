@@ -2,6 +2,7 @@
 
 import { Download, FileText, Loader2 } from "lucide-react"
 import { useState } from "react"
+import { usePdfViewer } from "@/components/pdf-viewer"
 import { toast } from "@/components/ui/toast"
 import { useI18n } from "@/lib/i18n/context"
 import { downloadFile } from "@/lib/upload"
@@ -12,8 +13,10 @@ export function FileChip({ path, name, size, inverted }: { path: string; name: s
   const { t } = useI18n()
   const [busy, setBusy] = useState(false)
   const isPdf = name.toLowerCase().endsWith(".pdf")
+  const pdf = usePdfViewer()
 
   async function run(mode: "download" | "open") {
+    if (mode === "open" && isPdf) return pdf.open({ path, name })   // PDFs open inside the app
     setBusy(true)
     try {
       await downloadFile(path, name, mode)

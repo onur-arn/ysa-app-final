@@ -1,6 +1,6 @@
 "use client"
 
-import { AtSign, Bell, CalendarDays, CheckCheck, ListChecks, MessageCircle, MessageSquare, UserPlus } from "lucide-react"
+import { AtSign, Bell, CalendarDays, CheckCheck, ListChecks, MessageCircle, MessageSquare, UserPlus, Newspaper, NotebookPen } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { Avatar } from "@/components/avatar"
@@ -17,10 +17,12 @@ import { cn } from "@/lib/utils"
 
 const ICONS: Record<string, typeof Bell> = {
   message: MessageCircle, mention: AtSign, task: ListChecks, event: CalendarDays, member: UserPlus, comment: MessageSquare,
+  post: Newspaper, note: NotebookPen,
 }
 const TONES: Record<string, string> = {
   message: "bg-primary/12 text-primary", mention: "bg-violet-500/12 text-violet-600", task: "bg-amber-500/14 text-amber-600",
   event: "bg-sky-500/12 text-sky-600", member: "bg-emerald-500/12 text-emerald-600", comment: "bg-secondary text-foreground",
+  post: "bg-primary/12 text-primary", note: "bg-amber-500/14 text-amber-600",
 }
 
 export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {

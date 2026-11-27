@@ -1,6 +1,6 @@
 export type Station = { id: string; name: string; short: string; city: string; color: string; position: number; lat: number | null; lng: number | null }
 
-export type NotifPrefs = { messages: boolean; tasks: boolean; events: boolean; members: boolean }
+export type NotifPrefs = { messages: boolean; tasks: boolean; events: boolean; members: boolean; posts?: boolean }
 
 export type Profile = {
   id: string
@@ -52,6 +52,8 @@ export type Post = {
   mention_stations: string[]
   mention_groups: string[]
   created_at: string
+  /** set when the author changed the text ("düzenlendi") */
+  edited_at?: string | null
   post_likes: { user_id: string }[]
   post_comments: { id: string; author_id: string; content: string; created_at: string }[]
   polls: Poll | null
@@ -148,6 +150,8 @@ export type Message = {
   created_at: string
   /** copy forwarded from another conversation (column added 24/11/2026) */
   forwarded?: boolean
+  /** set when the sender changed the text ("düzenlendi") */
+  edited_at?: string | null
   message_likes?: { user_id: string }[]
   /** client-only: optimistic message not yet confirmed */
   pending?: boolean
@@ -177,3 +181,21 @@ export type Report = {
   resolved_at: string | null
   created_at: string
 }
+
+/** Shared note of a station (Görevler → Notlar), visible to that station and the stations it is shared with. */
+export type Note = {
+  id: string
+  station_id: string
+  shared_stations: string[]
+  title: string
+  content: string
+  color: string | null
+  pinned: boolean
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** A message the member marked as important (⭐). */
+export type StarredMessage = { message_id: string; created_at: string; messages: Message | null }

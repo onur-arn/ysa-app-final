@@ -45,3 +45,13 @@ export function useUnreadMessages() {
   const { data } = useConversations()
   return (data ?? []).reduce((s, c) => s + (c.muted && !c.mentioned ? 0 : c.unread), 0)
 }
+
+export const useStars = () => hydrationSafe(useQuery({ queryKey: qk.stars, queryFn: f.fetchStars }), useHydrated())
+/** ids of the member's ⭐ messages */
+export function useStarredIds() {
+  const { data } = useStars()
+  return useMemo(() => new Set((data ?? []).map((s) => s.message_id)), [data])
+}
+export const useNotes = () => hydrationSafe(useQuery({ queryKey: qk.notes, queryFn: f.fetchNotes }), useHydrated())
+export const useConversationMedia = (id: string, tab: f.MediaTab, enabled: boolean) =>
+  useQuery({ queryKey: qk.media(id, tab), queryFn: () => f.fetchConversationMedia(id, tab), enabled })

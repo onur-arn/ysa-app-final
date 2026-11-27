@@ -73,6 +73,14 @@ export async function initNativePush() {
     const url = (notification.data as { url?: unknown } | undefined)?.url
     if (typeof url === "string" && url.startsWith("/") && !url.startsWith("//")) openFromNotification(url)
   })
+  // 27/11/2026: notifications switched back on for everyone, once — a member who turned
+  // them off in the app gets them again (iOS itself is only asked if it never was).
+  try {
+    if (!localStorage.getItem("ysa-native-push-reset-1")) {
+      localStorage.setItem("ysa-native-push-reset-1", "1")
+      if (readPref() === "off") localStorage.removeItem(NATIVE_PREF)
+    }
+  } catch {}
   const pref = readPref()
   if (pref === "off") return
   if (pref === null) return void (await enableNativePush())

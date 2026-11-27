@@ -1,6 +1,6 @@
 "use client"
 
-import { AtSign, BellOff, Camera, Mail, MessageCirclePlus, MessagesSquare, Search, Trash2, Users } from "lucide-react"
+import { AtSign, BellOff, Camera, Mail, MessageCirclePlus, MessagesSquare, Search, Star, Trash2, Users } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, type ReactNode } from "react"
@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/client"
 import type { ConversationRow } from "@/lib/types"
 import { compressImage, uploadMedia } from "@/lib/upload"
 import { cn } from "@/lib/utils"
+import { StarredSheet } from "./starred-list"
 
 function ListSkeleton() {
   return (
@@ -58,6 +59,7 @@ export function ConversationList() {
   const { data: rows, isPending } = useConversations()
   const [q, setQ] = useState("")
   const [creating, setCreating] = useState(false)
+  const [stars, setStars] = useState(false)
 
   const titleOf = (c: ConversationRow) => (c.type === "dm" ? member(c.other_id)?.full_name ?? t("common.formerMember") : c.name ?? t("messages.group"))
   const list = useMemo(() => {
@@ -84,6 +86,9 @@ export function ConversationList() {
           <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("messages.search")} className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" />
         </div>
+        <button onClick={() => setStars(true)} className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-amber-500 active:scale-95" aria-label={t("messages.starredTitle")}>
+          <Star className="size-5" />
+        </button>
         <button onClick={() => setCreating(true)} className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/20 active:scale-95" aria-label={t("messages.new")}>
           <MessageCirclePlus className="size-5" />
         </button>
@@ -123,6 +128,7 @@ export function ConversationList() {
         </div>
       )}
 
+      <StarredSheet open={stars} onClose={() => setStars(false)} onPick={(m) => { setStars(false); router.push(`/messages/${m.conversation_id}?m=${m.id}`) }} />
       <NewConversation open={creating} onClose={() => setCreating(false)} onOpen={(id) => router.push(`/messages/${id}`)} />
     </div>
   )

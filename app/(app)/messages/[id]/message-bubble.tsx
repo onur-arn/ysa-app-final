@@ -2,7 +2,7 @@
 
 import { Linkified } from "@/components/linkified"
 import { ProfileLink } from "@/components/profile/profile-link"
-import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Forward, Heart, Pin, Trash2, Users } from "lucide-react"
+import { Check, CheckCheck, Clock, Copy, CornerUpLeft, Flag, Forward, Heart, Pencil, Pin, Star, StarOff, Trash2, Users } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { memo, useRef, useState, type ReactNode } from "react"
@@ -61,7 +61,7 @@ function ChatPoll({ message, inverted }: { message: Message; inverted: boolean }
   return <PollView poll={poll} inverted={inverted} onChanged={(next: Poll) => qc.setQueryData(qk.polls(message.id), next)} />
 }
 
-export type BubbleAction = "reply" | "pin" | "delete" | "jump" | "forward"
+export type BubbleAction = "reply" | "pin" | "delete" | "jump" | "forward" | "edit" | "star"
 
 type BubbleProps = {
   m: Message
@@ -72,6 +72,8 @@ type BubbleProps = {
   canPin: boolean
   readByOther: boolean
   highlight: boolean
+  /** ⭐ marked as important by me */
+  starred?: boolean
   /** arrived while the conversation was open: animate its entrance */
   isNew?: boolean
   /** stable callback (same function on every render) so bubbles can be memoised */
@@ -79,7 +81,7 @@ type BubbleProps = {
   onMediaLoad?: () => void
 }
 
-export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGroup, reply, canPin, readByOther, highlight, isNew, onAction, onMediaLoad }: BubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGroup, reply, canPin, readByOther, highlight, starred, isNew, onAction, onMediaLoad }: BubbleProps) {
   const { me, station } = useApp()
   const member = useMemberMap()
   const { t, fmtDate } = useI18n()
@@ -92,6 +94,10 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
   const press = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pressed = useRef(false)
   const lastTap = useRef(0)
+  // swipe right on a bubble → reply (like WhatsApp)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const replyHint = useRef<HTMLSpanElement>(null)
+  const touch = useRef({ x: 0, y: 0, dx: 0, swiping: false })
   const [showLikes, setShowLikes] = useState(false)
   const likes = m.message_likes ?? []
   const likedByMe = likes.some((l) => l.user_id === me.id)
@@ -116,20 +122,46 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
   const media = m.kind === "image" || m.kind === "gif"
   const canForward = !m.deleted_at && !m.pending && FORWARDABLE.has(m.kind)
   // Long press opens the action sheet; it never selects text (select-none + no iOS callout).
+  const canSwipe = !m.deleted_at && !m.pending
+  const setShift = (px: number, animate: boolean) => {
+    const row = rowRef.current
+    if (row) {
+      row.style.transition = animate ? "transform 180ms ease-out" : "none"
+      row.style.transform = px ? `translateX(${px}px)` : ""
+    }
+    if (replyHint.current) replyHint.current.style.opacity = String(Math.min(1, px / 55))
+  }
   const longPress = {
     onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); setMenu(true) },
-    onTouchStart: () => {
+    onTouchStart: (e: React.TouchEvent) => {
       pressed.current = false
+      touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, swiping: false }
       press.current = setTimeout(() => { pressed.current = true; setMenu(true) }, 380)
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const dx = e.touches[0].clientX - touch.current.x
+      const dy = e.touches[0].clientY - touch.current.y
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) press.current && clearTimeout(press.current)
+      if (!canSwipe) return
+      if (!touch.current.swiping && dx > 12 && Math.abs(dx) > Math.abs(dy) * 1.6) touch.current.swiping = true
+      if (touch.current.swiping) {
+        touch.current.dx = Math.max(0, Math.min(dx * 0.6, 80))
+        setShift(touch.current.dx, false)
+      }
     },
     onTouchEnd: (e: React.TouchEvent) => {
       if (press.current) clearTimeout(press.current)
+      if (touch.current.swiping) {
+        if (touch.current.dx >= 50) { navigator.vibrate?.(10); onAction("reply", m) }
+        touch.current.swiping = false
+        setShift(0, true)
+        return
+      }
       if (pressed.current) { e.preventDefault(); return } // the long press already opened the menu
       const now = Date.now()
       if (now - lastTap.current < 300) { lastTap.current = 0; void toggleLike() } // double-tap to like
       else lastTap.current = now
     },
-    onTouchMove: () => press.current && clearTimeout(press.current),
     onDoubleClick: () => void toggleLike(),
   }
   const act = (fn: () => void) => () => { setMenu(false); fn() }
@@ -143,7 +175,8 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
       className={cn("msg-row group flex items-end gap-2", mine ? "justify-end" : "justify-start", firstOfGroup ? "mt-3" : "mt-[3px]", likes.length > 0 && "mb-2.5")}
     >
       {!mine && isGroup && <span className="w-8 shrink-0">{lastOfGroup && <ProfileLink id={m.sender_id}><MemberAvatar id={m.sender_id} size={32} showOnline={false} /></ProfileLink>}</span>}
-      <div className={cn("relative max-w-[78%]", highlight && "animate-pulse")}>
+      <div ref={rowRef} className={cn("relative max-w-[78%]", highlight && "animate-pulse")}>
+        <span ref={replyHint} className="pointer-events-none absolute -left-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-secondary text-muted-foreground opacity-0"><CornerUpLeft className="size-4" /></span>
         <div
           {...longPress}
           className={cn(
@@ -208,6 +241,8 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
             </>
           )}
           <p className={cn("flex items-center justify-end gap-1 text-[10px] tabular-nums", mine ? "text-primary-foreground/75" : "text-muted-foreground", media ? "px-3 pb-1.5" : "mt-0.5")}>
+            {starred && <Star className="size-2.5 fill-current" />}
+            {m.edited_at && !m.deleted_at && <span className="italic">{t("messages.edited")}</span>}
             {fmtDate(m.created_at, { hour: "2-digit", minute: "2-digit" })}
             {mine && (m.pending ? <Clock className="size-3" /> : readByOther ? <CheckCheck className="size-3.5 text-sky-300" /> : <Check className="size-3" />)}
           </p>
@@ -251,6 +286,8 @@ export const MessageBubble = memo(function MessageBubble({ m, prev, next, isGrou
         </div>
         <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-secondary/60">
           {!m.deleted_at && <MenuItem icon={Heart} onClick={act(() => void toggleLike())}>{likedByMe ? t("messages.unlike") : t("messages.like")}</MenuItem>}
+          {!m.deleted_at && !m.pending && <MenuItem icon={starred ? StarOff : Star} onClick={act(() => onAction("star", m))}>{starred ? t("messages.unstar") : t("messages.star")}</MenuItem>}
+          {mine && m.kind === "text" && !m.deleted_at && !m.pending && <MenuItem icon={Pencil} onClick={act(() => onAction("edit", m))}>{t("common.edit")}</MenuItem>}
           {likes.length > 0 && <MenuItem icon={Users} onClick={act(() => setShowLikes(true))}>{t("messages.whoLiked")} · {likes.length}</MenuItem>}
           {canPin && !m.deleted_at && <MenuItem icon={Pin} onClick={act(() => onAction("pin", m))}>{t("messages.pin")}</MenuItem>}
           {!mine && !m.deleted_at && <MenuItem icon={Flag} onClick={act(() => setReport({ kind: "message", targetId: m.id, conversationId: m.conversation_id, label: member(m.sender_id)?.full_name ?? "" }))}>{t("report.action")}</MenuItem>}

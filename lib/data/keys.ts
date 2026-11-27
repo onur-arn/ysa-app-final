@@ -13,4 +13,7 @@ export const qk = {
   polls: (id: string) => ["poll", id] as const,
   notifications: ["notifications"] as const,
   reports: ["reports"] as const,
+  stars: ["stars"] as const,
+  notes: ["notes"] as const,
+  media: (id: string, tab: string) => ["media", id, tab] as const,
 }

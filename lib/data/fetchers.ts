@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { FEED_RETENTION_DAYS } from "@/lib/constants"
-import type { AppEvent, ConversationInfo, ConversationRow, Member, Message, Notification, Poll, Post, Profile, Report, Story, Task } from "@/lib/types"
+import type { AppEvent, ConversationInfo, ConversationRow, Member, Message, Note, Notification, Poll, Post, Profile, Report, StarredMessage, Story, Task } from "@/lib/types"
 
 const sb = () => createClient()
 
@@ -86,3 +86,34 @@ export const fetchNotifications = async () =>
 
 export const fetchReports = async () =>
   must(await sb().from("reports").select("*").order("created_at", { ascending: false }).limit(200)) as Report[]
+
+/** Messages from `since` onwards (to jump to an older message: search, ⭐, media). */
+export async function fetchMessagesFrom(convId: string, since: string) {
+  const q = sb().from("messages").select("*, message_likes(user_id)").eq("conversation_id", convId).gte("created_at", since).order("created_at").limit(1000)
+  return must(await q) as Message[]
+}
+
+/** ⭐ The member's important messages, newest first. */
+export const fetchStars = async () =>
+  must(await sb().from("message_stars").select("message_id, created_at, messages(*)").order("created_at", { ascending: false }).limit(500)) as unknown as StarredMessage[]
+
+export type MediaTab = "media" | "docs" | "links"
+/** Photos, documents or links shared in a conversation (Medya, belgeler, bağlantılar). */
+export async function fetchConversationMedia(convId: string, tab: MediaTab) {
+  let q = sb().from("messages").select("id, conversation_id, sender_id, kind, content, attachment_url, attachment_name, attachment_size, created_at")
+    .eq("conversation_id", convId).is("deleted_at", null).order("created_at", { ascending: false }).limit(300)
+  if (tab === "media") q = q.in("kind", ["image", "gif"])
+  else if (tab === "docs") q = q.eq("kind", "file")
+  else q = q.eq("kind", "text").or("content.ilike.%http%,content.ilike.%www.%")
+  return must(await q) as Message[]
+}
+
+/** Text search inside one conversation. */
+export async function searchMessages(convId: string, text: string) {
+  const term = text.replace(/[%_,()]/g, " ").trim()
+  if (!term) return []
+  return must(await sb().from("messages").select("*").eq("conversation_id", convId).is("deleted_at", null).ilike("content", `%${term}%`).order("created_at", { ascending: false }).limit(100)) as Message[]
+}
+
+export const fetchNotes = async () =>
+  must(await sb().from("notes").select("*").order("pinned", { ascending: false }).order("updated_at", { ascending: false })) as Note[]

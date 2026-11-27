@@ -7,7 +7,7 @@ import { useApp } from "@/components/providers/app-context"
 import { qk } from "@/lib/data/keys"
 import * as f from "@/lib/data/fetchers"
 import { createClient } from "@/lib/supabase/client"
-import type { Message, Notification } from "@/lib/types"
+import type { ConversationRow, Message, Notification } from "@/lib/types"
 
 /**
  * The realtime hub — one Supabase Realtime connection for the whole app.
@@ -75,6 +75,27 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
     void qc.prefetchQuery({ queryKey: qk.tasks, queryFn: f.fetchTasks })
     void qc.prefetchQuery({ queryKey: qk.stories, queryFn: f.fetchStories })
     void qc.prefetchQuery({ queryKey: qk.notifications, queryFn: f.fetchNotifications })
+
+    // Unread conversations get their new messages loaded ahead of time, so opening one
+    // (from the list or a notification) shows them at once instead of a moment later.
+    const warming = new Set<string>()
+    const warm = (rows: ConversationRow[] | undefined) => {
+      for (const c of (rows ?? []).filter((r) => r.unread > 0).slice(0, 10)) {
+        if (warming.has(c.id)) continue
+        const cached = qc.getQueryData<Message[]>(qk.messages(c.id))
+        const lastAt = cached?.filter((m) => !m.pending).at(-1)?.created_at
+        if (lastAt && new Date(lastAt).getTime() >= new Date(c.last_message_at).getTime()) continue
+        warming.add(c.id)
+        const job = lastAt
+          ? f.fetchMessagesFrom(c.id, lastAt).then((fresh) => fresh.forEach((m) => patchMessage(qc, m)))
+          : qc.prefetchQuery({ queryKey: qk.messages(c.id), queryFn: () => f.fetchMessages(c.id) })
+        void job.catch(() => {}).finally(() => warming.delete(c.id))
+      }
+    }
+    const unwatch = qc.getQueryCache().subscribe((e) => {
+      if (e.type === "updated" && e.action.type === "success" && e.query.queryKey[0] === "conversations") warm(e.query.state.data as ConversationRow[])
+    })
+    warm(qc.getQueryData<ConversationRow[]>(qk.conversations))
 
     let connectedOnce = false
     let cancelled = false
@@ -150,6 +171,8 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
           refreshTasks()
           if (row.task_id) void qc.invalidateQueries({ queryKey: qk.taskComments(row.task_id) })
         })
+        .on("postgres_changes", { event: "*", schema: "public", table: "notes" }, inv(qk.notes))
+        .on("postgres_changes", { event: "*", schema: "public", table: "message_stars", filter: `user_id=eq.${me.id}` }, inv(qk.stars))
         .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (p) => {
           refreshMembers()
           if ((p.new as { id?: string })?.id === me.id) void qc.invalidateQueries({ queryKey: qk.me })
@@ -172,6 +195,21 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
     }
     void open()
 
+    // Back from the background (iOS suspends the WebSocket): don't wait for the socket to
+    // notice it is dead — refetch the chats now, and reopen the channel if it dropped.
+    let hiddenAt = 0
+    const onResume = () => {
+      if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return }
+      if (!hiddenAt) return
+      const away = Date.now() - hiddenAt
+      hiddenAt = 0
+      if (away < 3000) return
+      void qc.invalidateQueries({ queryKey: qk.conversations })
+      void qc.invalidateQueries({ queryKey: ["messages"] })   // active ones refetch now, the others on open
+      if (ch && ch.state !== "joined") void open()
+    }
+    document.addEventListener("visibilitychange", onResume)
+
     // "Last seen" is written when the app opens and when it goes to the background —
     // live "online" status comes from presence, so no periodic writes are needed.
     const seen = () => void supabase.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("id", me.id).then()
@@ -180,6 +218,8 @@ export function RealtimeHub({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onHide)
     return () => {
       document.removeEventListener("visibilitychange", onHide)
+      document.removeEventListener("visibilitychange", onResume)
+      unwatch()
       cancelled = true
       if (ch) void supabase.removeChannel(ch)
       channelRef.current = null

@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, BellOff, Camera, LogOut, Trash2, UserPlus, X } from "lucide-react"
+import { Bell, BellOff, Camera, ChevronRight, LogOut, Star, Trash2, User, UserPlus, X } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -12,16 +12,18 @@ import { Button } from "@/components/ui/button"
 import { Field, Input, Sheet, Toggle } from "@/components/ui/sheet"
 import { toast } from "@/components/ui/toast"
 import { useApp } from "@/components/providers/app-context"
-import { useMemberMap } from "@/lib/data/hooks"
+import { useMemberMap, useStars } from "@/lib/data/hooks"
 import { qk } from "@/lib/data/keys"
 import { useI18n } from "@/lib/i18n/context"
 import { levelOf } from "@/lib/levels"
 import { isAdmin } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/client"
-import type { ConversationInfo as Conv } from "@/lib/types"
+import type { ConversationInfo as Conv, Message } from "@/lib/types"
+import { MediaSheet, MediaStrip } from "../conversation-media"
+import { StarredSheet } from "../starred-list"
 import { compressImage, uploadMedia } from "@/lib/upload"
 
-export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open: boolean; onClose: () => void; conv: Conv; onOpenProfile: (id: string) => void }) {
+export function ConversationInfo({ open, onClose, conv, onOpenProfile, onJump }: { open: boolean; onClose: () => void; conv: Conv; onOpenProfile: (id: string) => void; onJump: (m: Message) => void }) {
   const { me } = useApp()
   const { t } = useI18n()
   const member = useMemberMap()
@@ -31,6 +33,10 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
   const [adding, setAdding] = useState<string[] | null>(null)
   const [name, setName] = useState(conv.name ?? "")
   const [handover, setHandover] = useState(false)
+  const [media, setMedia] = useState(false)
+  const [stars, setStars] = useState(false)
+  const { data: starred = [] } = useStars()
+  const starCount = starred.filter((s) => s.messages?.conversation_id === conv.id && !s.messages.deleted_at).length
   const mine = conv.conversation_members.find((m) => m.user_id === me.id)
   const groupAdmin = !!mine?.is_admin || isAdmin(me)
   const other = conv.type === "dm" ? conv.conversation_members.find((m) => m.user_id !== me.id)?.user_id : null
@@ -109,6 +115,16 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
           </div>
         )}
         {other && <PointsCard userId={other} />}
+        {other && (
+          <button onClick={() => onOpenProfile(other)} className="flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-3 text-left text-sm font-semibold text-foreground active:bg-secondary">
+            <User className="size-4 text-primary" /> <span className="flex-1">{t("messages.viewProfile")}</span> <ChevronRight className="size-4 text-muted-foreground" />
+          </button>
+        )}
+        {open && <MediaStrip convId={conv.id} onOpen={() => setMedia(true)} />}
+        <button onClick={() => setStars(true)} className="flex items-center gap-3 rounded-2xl bg-secondary/60 px-3 py-3 text-left text-sm font-semibold text-foreground active:bg-secondary">
+          <Star className="size-4 fill-amber-400 text-amber-400" /> <span className="flex-1">{t("messages.starredTitle")}</span>
+          <span className="text-xs font-medium text-muted-foreground">{starCount || ""}</span> <ChevronRight className="size-4 text-muted-foreground" />
+        </button>
         <Toggle checked={!!mine?.muted} onChange={setMuted} label={<span className="flex items-center gap-2">{mine?.muted ? <BellOff className="size-4" /> : <Bell className="size-4" />} {t("messages.mute")}</span>} />
         {conv.type === "group" && (
           <>
@@ -172,6 +188,8 @@ export function ConversationInfo({ open, onClose, conv, onOpenProfile }: { open:
           </>
         )}
       </div>
+      <MediaSheet open={media} convId={conv.id} onClose={() => setMedia(false)} onJump={(m) => { setMedia(false); onJump(m) }} />
+      <StarredSheet open={stars} convId={conv.id} onClose={() => setStars(false)} onPick={(m) => { setStars(false); onJump(m) }} />
       <Sheet open={handover} onClose={() => setHandover(false)} title={t("messages.pickAdmin")}>
         <p className="mb-3 text-sm text-muted-foreground">{t("messages.pickAdminText")}</p>
         <div className="flex flex-col gap-1">
