@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { trackAudio } from "@/lib/media-session"
 import { Mic, Pause, Play, Send, X } from "lucide-react"
 
 function formatTime(s: number) {
@@ -121,12 +122,19 @@ export function AudioMessage({
     }
   }, [src, durationHint])
 
+  // released when it ends / the app goes to the background (no "Now Playing" left on iOS)
+  useEffect(() => (audioRef.current ? trackAudio(audioRef.current) : undefined), [])
+
   const toggle = useCallback(async () => {
     const el = audioRef.current
     if (!el) return
     if (!el.paused) {
       el.pause()
       return
+    }
+    if (!el.getAttribute("src")) {
+      el.setAttribute("src", src)   // given back after a release
+      el.load()
     }
     try {
       if (el.readyState < 2) {
@@ -157,7 +165,7 @@ export function AudioMessage({
         setPlaying(false)
       }
     }
-  }, [duration])
+  }, [duration, src])
 
   function seek(clientX: number) {
     const el = audioRef.current

@@ -1,6 +1,7 @@
 "use client"
 
 import { ProfileLink } from "@/components/profile/profile-link"
+import { releaseAudio, trackAudio } from "@/lib/media-session"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Eye, Flag, Heart, Loader2, Music, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react"
@@ -62,10 +63,15 @@ export function StoriesBar() {
 
   useEffect(() => {
     audioRef.current?.pause()
+    if (!current?.music_preview_url) releaseAudio(audioRef.current)   // closed, or a story without music
     if (!current) return
     if (current.music_preview_url) {
       // One reused element: iOS only lets an element started by a tap keep playing on auto-advance.
-      const a = (audioRef.current ??= new Audio())
+      if (!audioRef.current) {
+        audioRef.current = new Audio()
+        trackAudio(audioRef.current)
+      }
+      const a = audioRef.current
       a.src = current.music_preview_url
       a.muted = muted
       void a.play().catch(() => {})

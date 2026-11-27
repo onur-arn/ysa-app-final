@@ -1,6 +1,7 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
+import { releaseAudio, trackAudio } from "@/lib/media-session"
 import { Check, Expand, Loader2, Minimize2, Minus, Music, Pause, Play, Plus, Search, Square, Trash2, Type, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
@@ -342,7 +343,7 @@ function MusicSheet({ open, current, onClose, onPick }: { open: boolean; current
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const stop = useCallback(() => {
-    audio.current?.pause()
+    releaseAudio(audio.current)
     setPlaying(null)
   }, [])
   useEffect(() => () => stop(), [stop])
@@ -363,8 +364,9 @@ function MusicSheet({ open, current, onClose, onPick }: { open: boolean; current
 
   function preview(t: Track) {
     if (playing === t.id) return stop()
-    audio.current?.pause()
+    releaseAudio(audio.current)
     audio.current = new Audio(t.preview)
+    trackAudio(audio.current)
     audio.current.onended = () => setPlaying(null)
     void audio.current.play()
     setPlaying(t.id)
